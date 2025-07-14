@@ -22,7 +22,7 @@ class MovieRepository @Inject constructor(private val service: TMDB_OMDBService)
                     LoadResult.Page(
                         data = response.search!!,
                         prevKey = if (page == 1) null else page - 1,
-                        nextKey = if (response.search!!.isEmpty()) null else page + 1
+                        nextKey = if (response.search.isEmpty()) null else page + 1
                     )
                 } catch (e: Exception) {
                     LoadResult.Error(e)
