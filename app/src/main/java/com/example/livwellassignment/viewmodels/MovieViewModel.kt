@@ -3,6 +3,7 @@ package com.example.livwellassignment.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.example.livwellassignment.models.MovieListItem
 import com.example.livwellassignment.models.MovieUiState
 import com.example.livwellassignment.network.repositories.MovieRepository
@@ -42,31 +43,41 @@ class MovieViewModel @Inject constructor(
         _searchText.value = it
     }
 
-    val uiState: StateFlow<MovieUiState> = _searchText
-        .debounce(300)
-        .distinctUntilChanged()
-        .flatMapLatest { input ->
-            if (input.isBlank()) {
-                flow {
-                    emit(MovieUiState.Error("Please enter movie name!"))
-                }
-            } else {
-                repository.getMovies(input)
-                    .map { pagingData ->
-                        movieResponse = flowOf(pagingData)
-                        MovieUiState.Success(flowOf(pagingData))  as MovieUiState
-                    }
-                    .onStart {
-                        emit(MovieUiState.Loading)
-                    }
-                    .catch { e ->
-                        emit(MovieUiState.Error(e.message ?: "Unknown error"))
-                    }
-            }
-        }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            MovieUiState.Loading
-        )
+//    val uiState: StateFlow<MovieUiState> = _searchText
+//        .debounce(300)
+//        .distinctUntilChanged()
+//        .flatMapLatest { input ->
+//            if (input.isBlank()) {
+//                flow {
+//                    emit(MovieUiState.Error("Please enter movie name!"))
+//                }
+//            } else {
+//                repository.getMovies(input)
+//                    .map { pagingData ->
+//                        MovieUiState.Success(pagingData) as MovieUiState
+//                    }
+//                    .onStart {
+//                        emit(MovieUiState.Loading)
+//                    }
+//                    .catch { e ->
+//                        emit(MovieUiState.Error(e.message ?: "Unknown error"))
+//                    }
+//            }
+//        }
+//        .stateIn(
+//            viewModelScope,
+//            SharingStarted.WhileSubscribed(5000),
+//            MovieUiState.Loading
+//        )
+val movies: Flow<PagingData<MovieListItem>> = _searchText
+    .debounce(300)
+    .distinctUntilChanged()
+    .flatMapLatest { input ->
+        if (input.isBlank()) {
+            flowOf(PagingData.empty())
+        } else {
+            repository.getMovies(input)
+        }.cachedIn(viewModelScope)
+    }
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), PagingData.empty())
 }

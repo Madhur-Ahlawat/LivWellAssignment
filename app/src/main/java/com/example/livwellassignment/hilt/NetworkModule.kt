@@ -35,6 +35,6 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideYtsService(retrofit: Retrofit): TMDB_OMDBService =
+    fun provideOMDBService(retrofit: Retrofit): TMDB_OMDBService =
         retrofit.create(TMDB_OMDBService::class.java)
 }

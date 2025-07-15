@@ -11,14 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.livwellassignment.models.MovieListItem
 import com.example.livwellassignment.viewmodels.MovieViewModel
 
 @Composable
 fun MovieGrid(modifier: Modifier, viewModel: MovieViewModel = hiltViewModel()) {
-    val movies: LazyPagingItems<MovieListItem> = viewModel.movieResponse!!.collectAsLazyPagingItems()
+    val movies = viewModel.movies.collectAsLazyPagingItems()
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 100.dp),
         modifier = modifier

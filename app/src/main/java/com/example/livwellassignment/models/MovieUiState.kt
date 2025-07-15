@@ -5,6 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 sealed class MovieUiState {
     object Loading : MovieUiState()
-    data class Success(val data: Flow<PagingData<MovieListItem>>) : MovieUiState()
+    data class Success(val movies: PagingData<MovieListItem>) : MovieUiState()
     data class Error(val message: String) : MovieUiState()
 }
