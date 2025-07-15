@@ -30,7 +30,7 @@ fun SearchBar(
     onSearch: (String) -> Unit,
     viewModel: MovieViewModel
 ) {
-    val input by viewModel.searchext.collectAsState()
+    val input by viewModel.searchText.collectAsState()
 
     LaunchedEffect(input) {
         delay(debounceDelay)

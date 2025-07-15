@@ -11,45 +11,62 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import javax.inject.Inject
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import javax.inject.Inject
 
 @HiltViewModel
 class MovieViewModel @Inject constructor(
     private val repository: MovieRepository
 ) : ViewModel() {
+
     private val _isDarkTheme = MutableStateFlow(false)
     val isDarkTheme: StateFlow<Boolean> = _isDarkTheme
 
     fun setDarkTheme(value: Boolean) {
         _isDarkTheme.value = value
     }
-    var _searchText: MutableStateFlow<String> = MutableStateFlow("")
-    val searchext: StateFlow<String> = _searchText
-    var onInputKeywordChanged: (String) -> Unit = this::onInputKeywordChanged
-    var movieResponse: Flow<PagingData<MovieListItem>> = repository.getMovies(searchext.value)
 
-    fun onInputKeywordChanged(keyword: String) {
-        _searchText.value = keyword
+    private val _searchText = MutableStateFlow("")
+    val searchText: StateFlow<String> = _searchText
+    var movieResponse: Flow<PagingData<MovieListItem>>? = null
+
+    var onInputKeywordChanged: (String) -> Unit = {
+        _searchText.value = it
     }
 
     val uiState: StateFlow<MovieUiState> = _searchText
-        .debounce(500)
+        .debounce(300)
         .distinctUntilChanged()
-        .mapLatest { input ->
+        .flatMapLatest { input ->
             if (input.isBlank()) {
-                MovieUiState.Error("Please enter movie name!")
-            } else {
-                try {
-                    movieResponse = repository.getMovies(input)
-                    MovieUiState.Success(movieResponse)
-                } catch (e: Exception) {
-                    MovieUiState.Error(e.message ?: "Unknown error")
+                flow {
+                    emit(MovieUiState.Error("Please enter movie name!"))
                 }
+            } else {
+                repository.getMovies(input)
+                    .map { pagingData ->
+                        movieResponse = flowOf(pagingData)
+                        MovieUiState.Success(flowOf(pagingData))  as MovieUiState
+                    }
+                    .onStart {
+                        emit(MovieUiState.Loading)
+                    }
+                    .catch { e ->
+                        emit(MovieUiState.Error(e.message ?: "Unknown error"))
+                    }
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MovieUiState.Loading)
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            MovieUiState.Loading
+        )
 }

@@ -18,7 +18,7 @@ import com.example.livwellassignment.viewmodels.MovieViewModel
 
 @Composable
 fun MovieGrid(modifier: Modifier, viewModel: MovieViewModel = hiltViewModel()) {
-    val movies: LazyPagingItems<MovieListItem> = viewModel.movieResponse.collectAsLazyPagingItems()
+    val movies: LazyPagingItems<MovieListItem> = viewModel.movieResponse!!.collectAsLazyPagingItems()
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 100.dp),
         modifier = modifier
