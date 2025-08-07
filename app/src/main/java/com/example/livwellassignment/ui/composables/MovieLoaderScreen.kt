@@ -1,34 +1,70 @@
 package com.example.livwellassignment.ui.composables
 
+import Last6CardDigitsTransformation
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.example.livwellassignment.models.MovieUiState
+import com.example.livwellassignment.R
+import com.example.livwellassignment.models.enums.FocusedFieldEnum
 import com.example.livwellassignment.viewmodels.MovieViewModel
 
 @Composable
 fun MovieGridScreen(
     modifier: Modifier = Modifier,
-    viewModel: MovieViewModel = hiltViewModel()
+    viewModel: MovieViewModel
 ) {
     val search by viewModel.searchText.collectAsState()
     val movies = viewModel.movies.collectAsLazyPagingItems()
-    Column(modifier = modifier
-        .fillMaxSize()
-        .padding(top = 10.dp)) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(top = 10.dp)
+    ) {
         SearchBar(
             onSearch = viewModel.onInputKeywordChanged,
             viewModel = viewModel
@@ -53,14 +89,279 @@ fun MovieGridScreen(
                     Text("No results found.")
                 }
             }
+
             search.isBlank() -> {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Please enter movie name!")
                 }
             }
-            else ->{
+
+            else -> {
                 MovieGrid(modifier = Modifier.weight(1f), viewModel = viewModel)
             }
         }
+    }
+}
+
+//@Composable
+//fun SetmPinUI(modifier: Modifier,
+//             viewModel: MovieViewModel ) {
+//    val pin by viewModel.pin.collectAsState()
+//
+//    Column(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .background(Color.White)
+//            .padding(24.dp),
+//        verticalArrangement = Arrangement.SpaceBetween
+//    ) {
+//
+//        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+//            // Header
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                Text("State Bank of India", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+//                Spacer(modifier = Modifier.weight(1f))
+//                Image(
+//                    painter = painterResource(id = R.drawable.upi_logo),
+//                    contentDescription = "UPI Logo",
+//                    modifier = Modifier.size(48.dp)
+//                )
+//            }
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//
+//            Text("SET 6 digit UPI PIN", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//
+//            // PIN Indicator
+//            Row(
+//                horizontalArrangement = Arrangement.Center,
+//                modifier = Modifier.fillMaxWidth()
+//            ) {
+//                repeat(6) { index ->
+//                    val isFilled = index < pin.length
+//                    Box(
+//                        modifier = Modifier
+//                            .size(20.dp)
+//                            .padding(4.dp)
+//                            .clip(CircleShape)
+//                            .background(if (isFilled) Color.Black else Color.LightGray)
+//                    )
+//                }
+//            }
+//
+//            Spacer(modifier = Modifier.height(24.dp))
+//
+//            Text(
+//                text = "UPI PIN will keep your account secure from unauthorized access. Do not share this PIN with anyone.",
+//                fontSize = 14.sp,
+//                color = Color.Gray,
+//                textAlign = TextAlign.Center
+//            )
+//        }
+//
+//        // Number Pad + Submit
+//        Column {
+//            NumberPad(
+//                onNumberClick = {
+//                    if (pin.length < 6) viewModel.addPINDigit(it)
+//                },
+//                onDelete = {
+//                    if (pin.isNotEmpty()) viewModel.deletePINDigit()
+//                },
+//                onSubmit = {
+//                    if (pin.length == 6) {
+//                        viewModel.submitPin()
+//                    }
+//                }
+//            )
+//        }
+//    }
+//}
+//
+
+
+@Composable
+fun VerifyCardScreen(
+    viewModel: MovieViewModel = viewModel(),
+    modifier: Modifier
+) {
+    val cardDigits by viewModel.cardDigits.collectAsState()
+    val expiryDate by viewModel.expiryDate.collectAsState()
+    val focusedField by viewModel.getFocusedField().collectAsState()
+    var cardFocusRequester by remember { mutableStateOf(FocusRequester()) }
+    var expiryFocusRequester by remember { mutableStateOf(FocusRequester()) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val interactionSourceCard = remember { MutableInteractionSource() }
+    val interactionSourceExpiry = remember { MutableInteractionSource() }
+    val isFocusedCard by interactionSourceCard.collectIsFocusedAsState()
+    val isFocusedExpiry by interactionSourceExpiry.collectIsFocusedAsState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(24.dp)
+    ) {
+        Spacer(Modifier.height(16.dp))
+        // Top AppBar
+        Icon(
+            imageVector = Icons.Default.ArrowBack,
+            contentDescription = "Back",
+            modifier = Modifier
+                .size(28.dp)
+                .clickable { /* Handle back */ }
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        Text("Verify debit card details", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("Enter details of your ICICI Bank debit card to set UPI PIN", color = Color.Gray)
+
+        Spacer(Modifier.height(24.dp))
+
+        // Bank Info Card
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(4.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.AccountBox, contentDescription = "Bank", tint = Color.Red)
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("ICICI Bank", fontWeight = FontWeight.Bold)
+                    Text("Savings Account - 9134", color = Color.Gray)
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Text("Enter the last 6 digits of card number")
+        OutlinedTextField(
+            value = cardDigits,
+            onValueChange = { viewModel.addCardDigit(it) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(cardFocusRequester)
+                .focusable()
+                .onFocusChanged { focusState ->
+                    if (focusState.isFocused) {
+                        viewModel.setFocusedField(FocusedFieldEnum.CARD)
+                    }
+                }
+                .clickable(true) {
+                    cardFocusRequester.requestFocus()
+                    keyboardController?.hide()
+                }, interactionSource = interactionSourceCard,
+            label = { Text("Card Number") },
+            placeholder = { Text("•••• •••• ••12 3456") },
+            visualTransformation = Last6CardDigitsTransformation(),
+            singleLine = true, readOnly = true
+        )
+        if (isFocusedCard) {
+            viewModel.setFocusedField(FocusedFieldEnum.CARD)
+        } else if (isFocusedExpiry) {
+            viewModel.setFocusedField(FocusedFieldEnum.EXPIRY)
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // Expiry Date
+        Text("Expiry Date")
+        OutlinedTextField(
+            value = expiryDate,
+            onValueChange = { viewModel.addExpiryDigit(it) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(expiryFocusRequester)
+                .focusable()
+                .onFocusChanged { focusState ->
+                    if (focusState.isFocused) {
+                        viewModel.setFocusedField(FocusedFieldEnum.EXPIRY)
+                    }
+                }
+                .clickable {
+                    expiryFocusRequester.requestFocus()
+                    keyboardController?.hide()
+                }, interactionSource = interactionSourceExpiry,
+            label = { Text("Expiry Date") },
+            placeholder = { Text("MM/YY") },
+            singleLine = true, readOnly = true
+        )
+        Spacer(Modifier.height(24.dp))
+
+        Button(
+            onClick = { viewModel.onSubmitCardInfo() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text("Continue", fontSize = 16.sp)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Number Pad
+        NumberPad(
+            onNumberClick = { digit ->
+                when (focusedField) {
+                    FocusedFieldEnum.CARD -> {
+                        viewModel.addCardDigit(digit)
+                    }
+
+                    FocusedFieldEnum.EXPIRY -> {
+                        if (expiryDate.length < 5) { // Limit to MM/YY with slash
+                            val raw = expiryDate.replace("/", "")
+                            val newRaw = (raw + digit).take(4)
+                            viewModel.onExpiryChange(newRaw)
+                        }
+
+                    }
+
+                    FocusedFieldEnum.NONE -> {}
+                }
+            },
+            onDelete = {
+                when (focusedField) {
+                    FocusedFieldEnum.CARD -> {
+                        viewModel.deleteCardDigit()
+                    }
+
+                    FocusedFieldEnum.EXPIRY -> {
+                        viewModel.deleteExpiryDigit()
+                    }
+
+                    FocusedFieldEnum.NONE -> {}
+                }
+            },
+            onSubmit = { viewModel.onSubmitCardInfo() }
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Powered by UPI
+        Text(
+            "Powered by",
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            fontSize = 12.sp,
+            color = Color.Gray
+        )
+        Image(
+            painter = painterResource(R.drawable.upi_logo), // add UPI logo in drawable
+            contentDescription = "UPI Logo",
+            modifier = Modifier
+                .size(60.dp)
+                .align(Alignment.CenterHorizontally)
+        )
     }
 }

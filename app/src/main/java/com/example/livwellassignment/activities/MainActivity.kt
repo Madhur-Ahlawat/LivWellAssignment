@@ -1,6 +1,8 @@
 package com.example.livwellassignment.activities
 
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,16 +12,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.livwellassignment.ui.composables.MovieGridScreen
+import com.example.livwellassignment.ui.composables.VerifyCardScreen
 import com.example.livwellassignment.ui.theme.LivWellAssignmentTheme
 import com.example.livwellassignment.viewmodels.MovieViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -29,6 +29,10 @@ class MainActivity : ComponentActivity() {
     var viewModel: MovieViewModel? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+        }
         enableEdgeToEdge()
         setContent {
             LivWellAssignmentTheme {
@@ -36,7 +40,7 @@ class MainActivity : ComponentActivity() {
                 val defaultDarkTheme = isSystemInDarkTheme()
                 var isDarkTheme by rememberSaveable { mutableStateOf(defaultDarkTheme) }
                 val backgroundColor = if (isDarkTheme) {
-                    MaterialTheme.colorScheme.background
+                    MaterialTheme.colorScheme.surface
                 } else {
                     MaterialTheme.colorScheme.background
                 }
@@ -48,17 +52,10 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .background(backgroundColor)
                 ) { innerPadding ->
-                    MovieGridScreen(modifier = Modifier.padding(innerPadding))
+//                    MovieGridScreen(modifier = Modifier.padding(innerPadding),viewModel!!)
+                    VerifyCardScreen(modifier = Modifier.padding(innerPadding), viewModel = viewModel!!)
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    LivWellAssignmentTheme {
-        MovieGridScreen(modifier = Modifier.fillMaxSize())
     }
 }
