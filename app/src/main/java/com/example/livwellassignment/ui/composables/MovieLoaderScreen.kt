@@ -317,27 +317,10 @@ fun VerifyCardScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .background(color = Color(0xFF1F1F1F)),
+                .background(color = Color(0xFF1F1F1F), shape = RoundedCornerShape(8.dp)),
             shape = RoundedCornerShape(8.dp)
         ) {
             Text(text = "Continue", fontSize = 16.sp)
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Powered by UPI
-        Text(
-            "Powered by",
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            fontSize = 12.sp,
-            color = Color.Gray
-        )
-        Image(
-            painter = painterResource(R.drawable.upi_logo), // add UPI logo in drawable
-            contentDescription = "UPI Logo",
-            modifier = Modifier
-                .size(60.dp)
-                .align(Alignment.CenterHorizontally)
-        )
     }
 }
