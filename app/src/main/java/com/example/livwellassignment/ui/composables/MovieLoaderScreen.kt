@@ -164,12 +164,27 @@ fun VerifyCardScreen(
             value = cardDigits,
             onValueChange = { viewModel.changeCardDigits(it) },
             modifier = Modifier
-                .fillMaxWidth(),
-            label = { Text("•••• •••• ••00 0000") }, keyboardOptions = KeyboardOptions(
+                .fillMaxWidth()
+                .border(
+                    width = 1.dp,
+                    color = Color(0xFF909090),
+                    shape = RoundedCornerShape(8.dp)
+                ),
+            shape = RoundedCornerShape(8.dp),
+            textStyle = TextStyle(
+                fontFamily = MonaSans,
+                fontSize = 24.sp,
+                color = Color(0xFFC1C1C1)
+            ),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                focusedBorderColor = Color(0xFF909090),
+                unfocusedBorderColor = Color(0xFF909090),
+                cursorColor = Color.Black
+            ),
+            keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number
-            ), visualTransformation = Last6CardDigitsTransformation(),
-
-            singleLine = true
+            ),
+            singleLine = true, visualTransformation = Last6CardDigitsTransformation(),
         )
 
         Spacer(Modifier.height(16.dp))
@@ -177,10 +192,9 @@ fun VerifyCardScreen(
         // Expiry Date
         Text("Expiry Date")
 
-        TextField(
-            value = textValue,
-            onValueChange = { newValue ->
-                if(newValue.text.toString().length<=5){
+        OutlinedTextField(
+            value = textValue, onValueChange = { newValue ->
+                if (newValue.text.toString().length <= 5) {
                     val oldValue = expiryDate
                     val oldText = oldValue.text
                     val newDigits = newValue.text.filter { it.isDigit() }
@@ -227,9 +241,35 @@ fun VerifyCardScreen(
                     )
                 }
             },
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(
+                    width = 1.dp,
+                    color = Color(0xFF909090),
+                    shape = RoundedCornerShape(8.dp)
+                ), shape = RoundedCornerShape(8.dp),
+            textStyle = TextStyle(
+                fontFamily = MonaSans,
+                fontSize = 24.sp,
+                color = Color(0xFFC1C1C1)
+            ),
+            colors = TextFieldDefaults.outlinedTextFieldColors(
+                focusedBorderColor = Color(0xFF909090),
+                unfocusedBorderColor = Color(0xFF909090),
+                cursorColor = Color.Black
+            ),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
-            placeholder = { Text("DD/MM") }
+            placeholder = {
+                Text(
+                    "DD/MM",
+                    style = TextStyle(
+                        fontFamily = MonaSans,
+                        fontSize = 24.sp,
+                        color = Color(0xFFC1C1C1)
+                    )
+                )
+            }
         )
 
         Spacer(Modifier.height(24.dp))

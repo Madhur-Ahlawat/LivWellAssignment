@@ -5,45 +5,50 @@ import androidx.compose.ui.text.input.VisualTransformation
 
 class Last6CardDigitsTransformation : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
-        val input = text.text.take(6)
-        val maskedPrefix = "•••• •••• ••"  // length 12, no trailing space
+        val rawInput = text.text.take(6) // only last 6 digits
+        val maskedPrefix = "•••• •••• ••" // fixed part
 
-        val formattedInput = buildString {
-            input.forEachIndexed { index, c ->
+        // Fill remaining editable space with placeholder zeros
+        val editablePart = buildString {
+            rawInput.forEachIndexed { index, c ->
                 append(c)
-                if (index == 1 && input.length > 2) {
+                if (index == 1 && rawInput.length > 2) {
                     append(' ')
+                }
+            }
+            val needed = 6 - rawInput.length
+            if (needed > 0) {
+                // We insert space after first two if not already filled
+                val afterTwo = if (rawInput.length <= 2) 1 else 0
+                for (i in 0 until needed) {
+                    if ((rawInput.length + i) == 2 && afterTwo == 1) append(' ')
+                    append('0')
                 }
             }
         }
 
-
-        val transformed = maskedPrefix + formattedInput
+        val transformed = maskedPrefix + editablePart
 
         val maskedLength = maskedPrefix.length
-        val formattedLength = formattedInput.length
         val transformedLength = transformed.length
-
 
         val offsetMapping = object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
                 return when {
                     offset <= 1 -> maskedLength + offset
-                    offset in 2..input.length -> maskedLength + offset + 1 // +1 for space
-                    else -> transformedLength
+                    offset in 2..rawInput.length -> maskedLength + offset + 1 // +1 for space
+                    else -> maskedLength + editablePart.length
                 }.coerceAtMost(transformedLength)
             }
 
             override fun transformedToOriginal(offset: Int): Int {
                 if (offset <= maskedLength) return 0
-
                 val relative = offset - maskedLength
-
                 return when {
                     relative <= 1 -> relative
-                    relative in 2..formattedLength -> relative - 1
-                    else -> input.length
-                }.coerceAtMost(input.length)
+                    relative in 2..editablePart.length -> relative - 1
+                    else -> rawInput.length
+                }.coerceAtMost(rawInput.length)
             }
         }
 
