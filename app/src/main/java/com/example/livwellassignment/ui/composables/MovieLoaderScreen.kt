@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextRange
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -51,6 +53,9 @@ import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.livwellassignment.R
 import com.example.livwellassignment.ui.fonts.MonaSans
+import com.example.livwellassignment.ui.fonts.MonaSansBold
+import com.example.livwellassignment.ui.fonts.MonaSansExtraBold
+import com.example.livwellassignment.util.compose_util.ZeroGrayTransformation
 import com.example.livwellassignment.viewmodels.MovieViewModel
 import okhttp3.internal.format
 import kotlin.math.exp
@@ -111,6 +116,7 @@ fun VerifyCardScreen(
     viewModel: MovieViewModel = viewModel(),
     modifier: Modifier
 ) {
+    val inputFieldheight = 54.dp
     val cardDigits by viewModel.cardDigits.collectAsState()
     val expiryDate by viewModel.expiryDate.collectAsState()
     val textValue = expiryDate.copy(selection = TextRange(expiryDate.text.length))
@@ -133,26 +139,53 @@ fun VerifyCardScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        Text("Verify debit card details", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text("Enter details of your ICICI Bank debit card to set UPI PIN", color = Color.Gray)
+        Text(
+            "Verify debit card details",
+            fontSize = 24.sp,
+            fontFamily = MonaSans,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            "Enter details of your ICICI Bank debit card to set UPI PIN",
+            fontSize = 14.sp,
+            fontFamily = MonaSans,
+            color = Color(0xFF7B7B7B)
+        )
 
         Spacer(Modifier.height(24.dp))
 
         // Bank Info Card
-        Card(
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(4.dp),
-            modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(
+                    width = 1.dp,
+                    color = Color(0xFFDEDEDE),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .clip(RoundedCornerShape(12.dp))
         ) {
-            Row(
-                Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(
+                        width = 1.dp,
+                        color = Color(0xDEDEDE)
+                    )
             ) {
-                Icon(Icons.Default.AccountBox, contentDescription = "Bank", tint = Color.Red)
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text("ICICI Bank", fontWeight = FontWeight.Bold)
-                    Text("Savings Account - 9134", color = Color.Gray)
+                Row(
+                    Modifier
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.AccountBox, contentDescription = "Bank", tint = Color.Red)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text("ICICI Bank", fontWeight = FontWeight.Bold)
+                        Text("Savings Account - 9134", color = Color.Gray)
+                    }
                 }
             }
         }
@@ -160,11 +193,13 @@ fun VerifyCardScreen(
         Spacer(Modifier.height(24.dp))
 
         Text("Enter the last 6 digits of card number")
+        Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = cardDigits,
             onValueChange = { viewModel.changeCardDigits(it) },
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(0.dp)
                 .border(
                     width = 1.dp,
                     color = Color(0xFF909090),
@@ -172,9 +207,8 @@ fun VerifyCardScreen(
                 ),
             shape = RoundedCornerShape(8.dp),
             textStyle = TextStyle(
-                fontFamily = MonaSans,
-                fontSize = 24.sp,
-                color = Color(0xFFC1C1C1)
+                fontFamily = MonaSansExtraBold,
+                fontSize = 22.sp
             ),
             colors = TextFieldDefaults.outlinedTextFieldColors(
                 focusedBorderColor = Color(0xFF909090),
@@ -184,13 +218,16 @@ fun VerifyCardScreen(
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number
             ),
-            singleLine = true, visualTransformation = Last6CardDigitsTransformation(),
+            singleLine = true,
+            visualTransformation = Last6CardDigitsTransformation()
         )
 
         Spacer(Modifier.height(16.dp))
 
         // Expiry Date
         Text("Expiry Date")
+
+        Spacer(Modifier.height(12.dp))
 
         OutlinedTextField(
             value = textValue, onValueChange = { newValue ->
@@ -243,6 +280,7 @@ fun VerifyCardScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(0.dp)
                 .border(
                     width = 1.dp,
                     color = Color(0xFF909090),
@@ -250,8 +288,8 @@ fun VerifyCardScreen(
                 ), shape = RoundedCornerShape(8.dp),
             textStyle = TextStyle(
                 fontFamily = MonaSans,
-                fontSize = 24.sp,
-                color = Color(0xFFC1C1C1)
+                fontSize = 22.sp,
+                color = Color(0xFF1F1F1F)
             ),
             colors = TextFieldDefaults.outlinedTextFieldColors(
                 focusedBorderColor = Color(0xFF909090),
@@ -265,7 +303,7 @@ fun VerifyCardScreen(
                     "DD/MM",
                     style = TextStyle(
                         fontFamily = MonaSans,
-                        fontSize = 24.sp,
+                        fontSize = 22.sp,
                         color = Color(0xFFC1C1C1)
                     )
                 )
@@ -278,10 +316,11 @@ fun VerifyCardScreen(
             onClick = { viewModel.onSubmitCardInfo() },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(52.dp)
+                .background(color = Color(0xFF1F1F1F)),
             shape = RoundedCornerShape(8.dp)
         ) {
-            Text("Continue", fontSize = 16.sp)
+            Text(text = "Continue", fontSize = 16.sp)
         }
 
         Spacer(modifier = Modifier.height(24.dp))

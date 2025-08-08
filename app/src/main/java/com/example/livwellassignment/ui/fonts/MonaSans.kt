@@ -17,3 +17,6 @@ val MonaSansItalic = FontFamily(
 val MonaSansItalicBold = FontFamily(
     Font(R.font.mona_sans_italic, FontWeight.Bold)
 )
+val MonaSansExtraBold = FontFamily(
+    Font(R.font.mona_sans_extra_bold, FontWeight.Bold)
+)
