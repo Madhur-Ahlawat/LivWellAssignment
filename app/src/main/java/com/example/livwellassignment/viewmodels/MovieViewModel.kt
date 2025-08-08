@@ -1,13 +1,12 @@
 package com.example.livwellassignment.viewmodels
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.example.livwellassignment.models.MovieListItem
-import com.example.livwellassignment.models.enums.FocusedFieldEnum
 import com.example.livwellassignment.network.repositories.MovieRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
@@ -47,52 +46,46 @@ class MovieViewModel @Inject constructor(
     private var _cardDigits = MutableStateFlow("")
     val cardDigits: StateFlow<String> = _cardDigits
 
-    private var _expiryDate = MutableStateFlow("")
-    val expiryDate: StateFlow<String> = _expiryDate
+    private var _expiryDate = MutableStateFlow(TextFieldValue())
+    val expiryDate: StateFlow<TextFieldValue> = _expiryDate
 //    private var _focusedField = mutableStateOf(FocusedFieldEnum.NONE)
 
-    private var _focusedField = MutableStateFlow(FocusedFieldEnum.NONE)
-    val focusedField : StateFlow<FocusedFieldEnum> = _focusedField
 
-    fun setFocusedField(focusedFieldEnum: FocusedFieldEnum){
-        _focusedField.value = focusedFieldEnum
-    }
-    fun getFocusedField(): MutableStateFlow<FocusedFieldEnum> {
-        return _focusedField
-    }
-
-    fun onCardDigitChange(input: String) {
+    fun changeCardDigits(input: String) {
         if (input.length <= 6 && input.all { it.isDigit() }) {
             _cardDigits.value = input
         }
     }
-    fun onExpiryChange(newVal: String) {
-        if (newVal.length <= 5 && newVal.all { it.isDigit() || it == '/' }) {
-            _expiryDate.value = formatExpiry(newVal)
+
+    fun changeExpiryDate(newValue: TextFieldValue) {
+        val raw = newValue.text.filter { it.isDigit() }
+
+        val formatted = when {
+            raw.length <= 2 -> raw
+            else -> raw.substring(0, 2) + "/" + raw.substring(2)
         }
-    }
 
-    fun addCardDigit(digit: String) {
-        onCardDigitChange(_cardDigits.value + digit)
-    }
+        // Calculate new cursor position after formatting
+        val cursorPosition = maxOf(formatted.length, newValue.selection.end)
 
-    fun addExpiryDigit(digit: String) {
-        onExpiryChange(_expiryDate.value + digit)
-    }
-
-    fun deleteCardDigit() {
-        _cardDigits.value = _cardDigits.value.dropLast(1)
+        _expiryDate.value = TextFieldValue(
+            text = formatted,
+            selection = TextRange(cursorPosition)
+        )
     }
 
     fun onSubmitCardInfo() {
-        if (_cardDigits.value.length == 6 && _expiryDate.value.matches(Regex("\\d{2}/\\d{2}"))) {
+        if (_cardDigits.value.length == 6 && _expiryDate.value.text.matches(Regex("\\d{2}/\\d{2}"))) {
             println("Card: ${_cardDigits.value}, Expiry: ${_expiryDate.value}")
         }
     }
     fun formatExpiry(raw: String): String {
+        val digits = raw.filter { it.isDigit() }
+        val trimmed = digits.take(4)
+        val month = trimmed.take(2).toIntOrNull()?.coerceIn(1, 12)?.toString()?.padStart(2, '0') ?: ""
         return when {
-            raw.length <= 2 -> raw
-            else -> raw.substring(0, 2) + "/" + raw.substring(2)
+            trimmed.length <= 2 -> month
+            else -> month + "/" + trimmed.drop(2)
         }
     }
 
@@ -107,14 +100,6 @@ class MovieViewModel @Inject constructor(
 //            _pin.value = _pin.value.dropLast(1)
 //        }
 //    }
-
-    fun deleteExpiryDigit() {
-        if (_expiryDate.value.isNotEmpty()) {
-            val raw = _expiryDate.value.replace("/", "")
-            val newRaw = raw.dropLast(1)
-            _expiryDate.value = formatExpiry(newRaw)
-        }
-    }
 
 
 //    fun resetPin() {

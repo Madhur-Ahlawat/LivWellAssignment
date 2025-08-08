@@ -4,9 +4,6 @@ import Last6CardDigitsTransformation
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowBack
@@ -31,26 +29,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.livwellassignment.R
-import com.example.livwellassignment.models.enums.FocusedFieldEnum
 import com.example.livwellassignment.viewmodels.MovieViewModel
 
 @Composable
@@ -192,14 +182,6 @@ fun VerifyCardScreen(
 ) {
     val cardDigits by viewModel.cardDigits.collectAsState()
     val expiryDate by viewModel.expiryDate.collectAsState()
-    val focusedField by viewModel.getFocusedField().collectAsState()
-    var cardFocusRequester by remember { mutableStateOf(FocusRequester()) }
-    var expiryFocusRequester by remember { mutableStateOf(FocusRequester()) }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val interactionSourceCard = remember { MutableInteractionSource() }
-    val interactionSourceExpiry = remember { MutableInteractionSource() }
-    val isFocusedCard by interactionSourceCard.collectIsFocusedAsState()
-    val isFocusedExpiry by interactionSourceExpiry.collectIsFocusedAsState()
 
     Column(
         modifier = Modifier
@@ -248,30 +230,15 @@ fun VerifyCardScreen(
         Text("Enter the last 6 digits of card number")
         OutlinedTextField(
             value = cardDigits,
-            onValueChange = { viewModel.addCardDigit(it) },
+            onValueChange = { viewModel.changeCardDigits(it) },
             modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(cardFocusRequester)
-                .focusable()
-                .onFocusChanged { focusState ->
-                    if (focusState.isFocused) {
-                        viewModel.setFocusedField(FocusedFieldEnum.CARD)
-                    }
-                }
-                .clickable(true) {
-                    cardFocusRequester.requestFocus()
-                    keyboardController?.hide()
-                }, interactionSource = interactionSourceCard,
-            label = { Text("Card Number") },
-            placeholder = { Text("•••• •••• ••12 3456") },
-            visualTransformation = Last6CardDigitsTransformation(),
-            singleLine = true, readOnly = true
+                .fillMaxWidth(),
+            label = { Text("•••• •••• ••00 0000") }, keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number
+            ),            visualTransformation = Last6CardDigitsTransformation(),
+
+            singleLine = true
         )
-        if (isFocusedCard) {
-            viewModel.setFocusedField(FocusedFieldEnum.CARD)
-        } else if (isFocusedExpiry) {
-            viewModel.setFocusedField(FocusedFieldEnum.EXPIRY)
-        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -279,23 +246,14 @@ fun VerifyCardScreen(
         Text("Expiry Date")
         OutlinedTextField(
             value = expiryDate,
-            onValueChange = { viewModel.addExpiryDigit(it) },
+            onValueChange = { viewModel.changeExpiryDate(it) },
             modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(expiryFocusRequester)
-                .focusable()
-                .onFocusChanged { focusState ->
-                    if (focusState.isFocused) {
-                        viewModel.setFocusedField(FocusedFieldEnum.EXPIRY)
-                    }
-                }
-                .clickable {
-                    expiryFocusRequester.requestFocus()
-                    keyboardController?.hide()
-                }, interactionSource = interactionSourceExpiry,
-            label = { Text("Expiry Date") },
+                .fillMaxWidth(),
+            label = { Text("Expiry Date") }, keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number
+            ),
             placeholder = { Text("MM/YY") },
-            singleLine = true, readOnly = true
+            singleLine = true
         )
         Spacer(Modifier.height(24.dp))
 
@@ -310,44 +268,6 @@ fun VerifyCardScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        // Number Pad
-        NumberPad(
-            onNumberClick = { digit ->
-                when (focusedField) {
-                    FocusedFieldEnum.CARD -> {
-                        viewModel.addCardDigit(digit)
-                    }
-
-                    FocusedFieldEnum.EXPIRY -> {
-                        if (expiryDate.length < 5) { // Limit to MM/YY with slash
-                            val raw = expiryDate.replace("/", "")
-                            val newRaw = (raw + digit).take(4)
-                            viewModel.onExpiryChange(newRaw)
-                        }
-
-                    }
-
-                    FocusedFieldEnum.NONE -> {}
-                }
-            },
-            onDelete = {
-                when (focusedField) {
-                    FocusedFieldEnum.CARD -> {
-                        viewModel.deleteCardDigit()
-                    }
-
-                    FocusedFieldEnum.EXPIRY -> {
-                        viewModel.deleteExpiryDigit()
-                    }
-
-                    FocusedFieldEnum.NONE -> {}
-                }
-            },
-            onSubmit = { viewModel.onSubmitCardInfo() }
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
 
         // Powered by UPI
         Text(
