@@ -34,21 +34,16 @@ class MovieViewModel @Inject constructor(
 
     private val _searchText = MutableStateFlow("")
     val searchText: StateFlow<String> = _searchText
-    var movieResponse: Flow<PagingData<MovieListItem>>? = null
 
     var onInputKeywordChanged: (String) -> Unit = {
         _searchText.value = it
     }
 
-//    private val _pin = MutableStateFlow("")
-//    val pin: StateFlow<String> get() = _pin
-
     private var _cardDigits = MutableStateFlow("")
     val cardDigits: StateFlow<String> = _cardDigits
 
-    private var _expiryDate = MutableStateFlow(TextFieldValue())
+    private var _expiryDate = MutableStateFlow(TextFieldValue(""))
     val expiryDate: StateFlow<TextFieldValue> = _expiryDate
-//    private var _focusedField = mutableStateOf(FocusedFieldEnum.NONE)
 
 
     fun changeCardDigits(input: String) {
@@ -58,19 +53,31 @@ class MovieViewModel @Inject constructor(
     }
 
     fun changeExpiryDate(newValue: TextFieldValue) {
-        val raw = newValue.text.filter { it.isDigit() }
+        _expiryDate.value = newValue
+    }
 
-        val formatted = when {
-            raw.length <= 2 -> raw
-            else -> raw.substring(0, 2) + "/" + raw.substring(2)
+    fun formatExpiryDate(value: TextFieldValue): TextFieldValue {
+        var text = value.text.filter { it.isDigit() } // remove non-digits
+        var selectionIndex = value.selection.end
+
+        if (text.length > 2) {
+            text = text.substring(0, 2) + "/" + text.substring(2)
+            if (selectionIndex == 3 && !value.text.contains("/")) {
+                selectionIndex++ // move cursor past "/"
+            }
         }
 
-        // Calculate new cursor position after formatting
-        val cursorPosition = maxOf(formatted.length, newValue.selection.end)
+        // Limit to MM/YY format (5 chars total)
+        if (text.length > 5) {
+            text = text.substring(0, 5)
+        }
 
-        _expiryDate.value = TextFieldValue(
-            text = formatted,
-            selection = TextRange(cursorPosition)
+        // Keep cursor within text bounds
+        selectionIndex = selectionIndex.coerceIn(0, text.length)
+
+        return TextFieldValue(
+            text = text,
+            selection = TextRange(selectionIndex)
         )
     }
 
@@ -79,68 +86,16 @@ class MovieViewModel @Inject constructor(
             println("Card: ${_cardDigits.value}, Expiry: ${_expiryDate.value}")
         }
     }
-    fun formatExpiry(raw: String): String {
-        val digits = raw.filter { it.isDigit() }
-        val trimmed = digits.take(4)
-        val month = trimmed.take(2).toIntOrNull()?.coerceIn(1, 12)?.toString()?.padStart(2, '0') ?: ""
-        return when {
-            trimmed.length <= 2 -> month
-            else -> month + "/" + trimmed.drop(2)
+
+    val movies: Flow<PagingData<MovieListItem>> = _searchText
+        .debounce(300)
+        .distinctUntilChanged()
+        .flatMapLatest { input ->
+            if (input.isBlank()) {
+                flowOf(PagingData.empty())
+            } else {
+                repository.getMovies(input)
+            }.cachedIn(viewModelScope)
         }
-    }
-
-//    fun addPINDigit(digit: String) {
-//        if (_pin.value.length < 6) {
-//            _pin.value += digit
-//        }
-//    }
-
-//    fun deletePINDigit() {
-//        if (_pin.value.isNotEmpty()) {
-//            _pin.value = _pin.value.dropLast(1)
-//        }
-//    }
-
-
-//    fun resetPin() {
-//        _pin.value = ""
-//    }
-
-//    val uiState: StateFlow<MovieUiState> = _searchText
-//        .debounce(300)
-//        .distinctUntilChanged()
-//        .flatMapLatest { input ->
-//            if (input.isBlank()) {
-//                flow {
-//                    emit(MovieUiState.Error("Please enter movie name!"))
-//                }
-//            } else {
-//                repository.getMovies(input)
-//                    .map { pagingData ->
-//                        MovieUiState.Success(pagingData) as MovieUiState
-//                    }
-//                    .onStart {
-//                        emit(MovieUiState.Loading)
-//                    }
-//                    .catch { e ->
-//                        emit(MovieUiState.Error(e.message ?: "Unknown error"))
-//                    }
-//            }
-//        }
-//        .stateIn(
-//            viewModelScope,
-//            SharingStarted.WhileSubscribed(5000),
-//            MovieUiState.Loading
-//        )
-val movies: Flow<PagingData<MovieListItem>> = _searchText
-    .debounce(300)
-    .distinctUntilChanged()
-    .flatMapLatest { input ->
-        if (input.isBlank()) {
-            flowOf(PagingData.empty())
-        } else {
-            repository.getMovies(input)
-        }.cachedIn(viewModelScope)
-    }
-    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(300), PagingData.empty())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(300), PagingData.empty())
 }

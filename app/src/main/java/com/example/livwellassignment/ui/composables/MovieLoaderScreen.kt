@@ -3,6 +3,7 @@ package com.example.livwellassignment.ui.composables
 import Last6CardDigitsTransformation
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,25 +24,36 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.livwellassignment.R
+import com.example.livwellassignment.ui.fonts.MonaSans
 import com.example.livwellassignment.viewmodels.MovieViewModel
+import okhttp3.internal.format
+import kotlin.math.exp
 
 @Composable
 fun MovieGridScreen(
@@ -93,88 +105,7 @@ fun MovieGridScreen(
     }
 }
 
-//@Composable
-//fun SetmPinUI(modifier: Modifier,
-//             viewModel: MovieViewModel ) {
-//    val pin by viewModel.pin.collectAsState()
-//
-//    Column(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .background(Color.White)
-//            .padding(24.dp),
-//        verticalArrangement = Arrangement.SpaceBetween
-//    ) {
-//
-//        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-//            // Header
-//            Row(
-//                modifier = Modifier.fillMaxWidth(),
-//                verticalAlignment = Alignment.CenterVertically
-//            ) {
-//                Text("State Bank of India", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-//                Spacer(modifier = Modifier.weight(1f))
-//                Image(
-//                    painter = painterResource(id = R.drawable.upi_logo),
-//                    contentDescription = "UPI Logo",
-//                    modifier = Modifier.size(48.dp)
-//                )
-//            }
-//
-//            Spacer(modifier = Modifier.height(16.dp))
-//
-//            Text("SET 6 digit UPI PIN", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-//
-//            Spacer(modifier = Modifier.height(16.dp))
-//
-//            // PIN Indicator
-//            Row(
-//                horizontalArrangement = Arrangement.Center,
-//                modifier = Modifier.fillMaxWidth()
-//            ) {
-//                repeat(6) { index ->
-//                    val isFilled = index < pin.length
-//                    Box(
-//                        modifier = Modifier
-//                            .size(20.dp)
-//                            .padding(4.dp)
-//                            .clip(CircleShape)
-//                            .background(if (isFilled) Color.Black else Color.LightGray)
-//                    )
-//                }
-//            }
-//
-//            Spacer(modifier = Modifier.height(24.dp))
-//
-//            Text(
-//                text = "UPI PIN will keep your account secure from unauthorized access. Do not share this PIN with anyone.",
-//                fontSize = 14.sp,
-//                color = Color.Gray,
-//                textAlign = TextAlign.Center
-//            )
-//        }
-//
-//        // Number Pad + Submit
-//        Column {
-//            NumberPad(
-//                onNumberClick = {
-//                    if (pin.length < 6) viewModel.addPINDigit(it)
-//                },
-//                onDelete = {
-//                    if (pin.isNotEmpty()) viewModel.deletePINDigit()
-//                },
-//                onSubmit = {
-//                    if (pin.length == 6) {
-//                        viewModel.submitPin()
-//                    }
-//                }
-//            )
-//        }
-//    }
-//}
-//
-
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VerifyCardScreen(
     viewModel: MovieViewModel = viewModel(),
@@ -182,6 +113,7 @@ fun VerifyCardScreen(
 ) {
     val cardDigits by viewModel.cardDigits.collectAsState()
     val expiryDate by viewModel.expiryDate.collectAsState()
+    val textValue = expiryDate.copy(selection = TextRange(expiryDate.text.length))
 
     Column(
         modifier = Modifier
@@ -235,7 +167,7 @@ fun VerifyCardScreen(
                 .fillMaxWidth(),
             label = { Text("•••• •••• ••00 0000") }, keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number
-            ),            visualTransformation = Last6CardDigitsTransformation(),
+            ), visualTransformation = Last6CardDigitsTransformation(),
 
             singleLine = true
         )
@@ -244,17 +176,62 @@ fun VerifyCardScreen(
 
         // Expiry Date
         Text("Expiry Date")
-        OutlinedTextField(
-            value = expiryDate,
-            onValueChange = { viewModel.changeExpiryDate(it) },
-            modifier = Modifier
-                .fillMaxWidth(),
-            label = { Text("Expiry Date") }, keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number
-            ),
-            placeholder = { Text("MM/YY") },
-            singleLine = true
+
+        TextField(
+            value = textValue,
+            onValueChange = { newValue ->
+                if(newValue.text.toString().length<=5){
+                    val oldValue = expiryDate
+                    val oldText = oldValue.text
+                    val newDigits = newValue.text.filter { it.isDigit() }
+
+                    // Build formatted string
+                    val formatted = buildString {
+                        for (i in newDigits.indices) {
+                            append(newDigits[i])
+                            if (i == 1 && newDigits.length > 2) {
+                                append("/")
+                            }
+                        }
+                    }
+
+//                    var newCursorPos = newValue.selection.start
+
+//                    val adding = newDigits.length > oldText.filter { it.isDigit() }.length
+//                    val deleting = newDigits.length < oldText.filter { it.isDigit() }.length
+
+//                    if (adding) {
+//                        // If adding after day (pos==2 before formatting), skip over "/"
+//                        if (oldValue.selection.start == 2) {
+//                            newCursorPos++
+//                        }
+//                    } else if (deleting) {
+//                        // If deleting right after "/", jump before it
+//                        if (oldValue.selection.start == 3 && oldText.getOrNull(2) == '/') {
+//                            newCursorPos--
+//                        }
+//                    }
+
+                    // Special mid-edit case: 1{cursor}1 → insert digit → 11/{cursor}1
+//                    if (adding && oldValue.selection.start == 1 && formatted.length >= 3) {
+//                        if (formatted.getOrNull(2) == '/') {
+//                            newCursorPos = 3
+//                        }
+//                    }
+
+                    viewModel.changeExpiryDate(
+                        TextFieldValue(
+                            text = formatted,
+                            selection = TextRange(formatted.length)
+                        )
+                    )
+                }
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            placeholder = { Text("DD/MM") }
         )
+
         Spacer(Modifier.height(24.dp))
 
         Button(

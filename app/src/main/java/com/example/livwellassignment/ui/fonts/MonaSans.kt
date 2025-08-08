@@ -1,0 +1,19 @@
+package com.example.livwellassignment.ui.fonts
+
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import com.example.livwellassignment.R
+
+val MonaSans = FontFamily(
+    Font(R.font.mona_sans_regular, FontWeight.Normal)
+)
+val MonaSansBold = FontFamily(
+    Font(R.font.mona_sans_regular, FontWeight.Bold)
+)
+val MonaSansItalic = FontFamily(
+    Font(R.font.mona_sans_italic, FontWeight.Normal)
+)
+val MonaSansItalicBold = FontFamily(
+    Font(R.font.mona_sans_italic, FontWeight.Bold)
+)
