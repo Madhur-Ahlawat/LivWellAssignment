@@ -1,7 +1,6 @@
 package com.example.livwellassignment.models
 
 import androidx.paging.PagingData
-import kotlinx.coroutines.flow.Flow
 
 sealed class MovieUiState {
     object Loading : MovieUiState()
