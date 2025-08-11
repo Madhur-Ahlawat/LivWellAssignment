@@ -1,6 +1,7 @@
 package com.example.livwellassignment.ui.composables
 
 import Last6CardDigitsTransformation
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,12 +15,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,10 +34,15 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.example.livwellassignment.R
 import com.example.livwellassignment.ui.fonts.MonaSans
 import com.example.livwellassignment.ui.fonts.MonaSansExtraBold
 import com.example.livwellassignment.viewmodels.MovieViewModel
@@ -105,10 +114,12 @@ fun VerifyCardScreen(
     viewModel: MovieViewModel = viewModel(),
     modifier: Modifier
 ) {
-    val inputFieldheight = 54.dp
     val cardDigits by viewModel.cardDigits.collectAsState()
     val expiryDate by viewModel.expiryDate.collectAsState()
     val textValue = expiryDate.copy(selection = TextRange(expiryDate.text.length))
+    var errorDay by remember { mutableStateOf<String?>(null) }
+    var errorMonth by remember { mutableStateOf<String?>(null) }
+    var completeError by remember { mutableStateOf<String?>("") }
 
     Column(
         modifier = Modifier
@@ -116,7 +127,7 @@ fun VerifyCardScreen(
             .background(Color.White)
             .padding(24.dp)
     ) {
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
         // Top AppBar
         Icon(
             imageVector = Icons.Default.ArrowBack,
@@ -126,19 +137,23 @@ fun VerifyCardScreen(
                 .clickable { /* Handle back */ }
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(18.dp))
 
         Text(
-            "Verify debit card details",
-            fontSize = 24.sp,
-            fontFamily = MonaSans,
-            fontWeight = FontWeight.Bold
+            style = TextStyle(
+                fontFamily = MonaSansExtraBold,
+                fontSize = 24.sp, fontWeight = FontWeight.Bold
+            ), text =
+                "Verify debit card details"
         )
         Text(
-            "Enter details of your ICICI Bank debit card to set UPI PIN",
-            fontSize = 14.sp,
-            fontFamily = MonaSans,
-            color = Color(0xFF7B7B7B)
+            style = TextStyle(
+                fontFamily = MonaSans,
+                fontSize = 16.sp,
+                color = Color(0xFF7B7B7B)
+            ),
+            text =
+                "Enter details of your ICICI Bank debit card to set UPI PIN"
         )
 
         Spacer(Modifier.height(24.dp))
@@ -169,11 +184,47 @@ fun VerifyCardScreen(
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.AccountBox, contentDescription = "Bank", tint = Color.Red)
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(color = Color(0xE9E9E9E9))
+                            .padding(1.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(color = Color.White)
+                                .padding(8.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_logo_icici_bank), // your drawable
+                                contentDescription = "ICICI Bank Logo",
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Inside
+                            )
+                        }
+
+                    }
+
+
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("ICICI Bank", fontWeight = FontWeight.Bold)
-                        Text("Savings Account - 9134", color = Color.Gray)
+                        Text(
+                            "ICICI Bank", style = TextStyle(
+                                fontFamily = MonaSans,
+                                fontSize = 14.sp,
+                                color = Color.Black, fontWeight = FontWeight.Bold
+                            )
+                        )
+                        Text(
+                            "Savings Account - 9134", style = TextStyle(
+                                fontFamily = MonaSans,
+                                fontSize = 12.sp,
+                                color = Color(0xFF7B7B7B), fontWeight = FontWeight.SemiBold
+                            )
+                        )
                     }
                 }
             }
@@ -181,7 +232,13 @@ fun VerifyCardScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        Text("Enter the last 6 digits of card number")
+        Text(
+            text = "Enter the last 6 digits of card number", style = TextStyle(
+                fontFamily = MonaSans,
+                fontSize = 14.sp,
+                color = Color.Black, fontWeight = FontWeight.SemiBold
+            )
+        )
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(
             value = cardDigits,
@@ -211,54 +268,82 @@ fun VerifyCardScreen(
             visualTransformation = Last6CardDigitsTransformation()
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(24.dp))
 
         // Expiry Date
-        Text("Expiry Date")
+        Text(
+            text = "Expiry Date", style = TextStyle(
+                fontFamily = MonaSans,
+                fontSize = 14.sp,
+                color = Color.Black,
+                fontWeight = FontWeight.SemiBold
+            )
+        )
 
         Spacer(Modifier.height(12.dp))
 
-        OutlinedTextField(
-            value = textValue, onValueChange = { newValue ->
-                if (newValue.text.toString().length <= 5) {
-                    val oldValue = expiryDate
-                    val oldText = oldValue.text
-                    val newDigits = newValue.text.filter { it.isDigit() }
 
-                    // Build formatted string
+        OutlinedTextField(
+            value = textValue,
+            onValueChange = { newValue ->
+                if (newValue.text.length <= 5) {
+                    val digits = newValue.text.filter { it.isDigit() }
+
                     val formatted = buildString {
-                        for (i in newDigits.indices) {
-                            append(newDigits[i])
-                            if (i == 1 && newDigits.length > 2) {
+                        for (i in digits.indices) {
+                            append(digits[i])
+                            if (i == 1 && digits.length > 2) {
                                 append("/")
                             }
                         }
                     }
 
-//                    var newCursorPos = newValue.selection.start
+                    // Validation
+                    val parts = formatted.split("/")
+                    when {
+                        parts.size == 1 && parts[0].length == 2 -> {
+                            val day = parts[0].toIntOrNull()
+                            if (day == null || day !in 1..31) {
+                                errorDay = "day"
+                            } else {
+                                errorDay = null
+                            }
+                        }
 
-//                    val adding = newDigits.length > oldText.filter { it.isDigit() }.length
-//                    val deleting = newDigits.length < oldText.filter { it.isDigit() }.length
+                        parts.size == 2 && parts[1].length == 2 -> {
+                            val day = parts[0].toIntOrNull()
+                            val month = parts[1].toIntOrNull()
+                            if(day != null && day in 1..31){
+                                errorDay = null
+                            }
+                            if(month != null && month in 1..12){
+                                errorMonth = null
+                            }
+                            if (day == null || day !in 1..31) {
+                                errorDay = "day"
+                            }
+                            if (month == null || month !in 1..12) {
+                                errorMonth = "month"
+                            }
+                        }
 
-//                    if (adding) {
-//                        // If adding after day (pos==2 before formatting), skip over "/"
-//                        if (oldValue.selection.start == 2) {
-//                            newCursorPos++
-//                        }
-//                    } else if (deleting) {
-//                        // If deleting right after "/", jump before it
-//                        if (oldValue.selection.start == 3 && oldText.getOrNull(2) == '/') {
-//                            newCursorPos--
-//                        }
-//                    }
-
-                    // Special mid-edit case: 1{cursor}1 → insert digit → 11/{cursor}1
-//                    if (adding && oldValue.selection.start == 1 && formatted.length >= 3) {
-//                        if (formatted.getOrNull(2) == '/') {
-//                            newCursorPos = 3
-//                        }
-//                    }
-
+                        else -> {
+                            if (completeError != null || newValue.toString().isNullOrEmpty()) {
+                                errorDay = null
+                                errorMonth = null
+                                completeError = ""
+                            }
+                        }
+                    }
+                    if (errorDay != null && errorMonth != null) {
+                        completeError = "Invalid day and month!"
+                    }
+                    else if (errorDay != null) {
+                        completeError = "Invalid " + errorDay
+                    }
+                    else if (errorMonth != null) {
+                        completeError = "Invalid " + errorMonth
+                    }
                     viewModel.changeExpiryDate(
                         TextFieldValue(
                             text = formatted,
@@ -274,16 +359,18 @@ fun VerifyCardScreen(
                     width = 1.dp,
                     color = Color(0xFF909090),
                     shape = RoundedCornerShape(8.dp)
-                ), shape = RoundedCornerShape(8.dp),
+                ),
+            shape = RoundedCornerShape(8.dp),
             textStyle = TextStyle(
                 fontFamily = MonaSans,
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 color = Color(0xFF1F1F1F)
             ),
             colors = TextFieldDefaults.outlinedTextFieldColors(
                 focusedBorderColor = Color(0xFF909090),
                 unfocusedBorderColor = Color(0xFF909090),
-                cursorColor = Color.Black
+                cursorColor = Color.Black,
+                errorBorderColor = Color.Red
             ),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
@@ -292,24 +379,41 @@ fun VerifyCardScreen(
                     "DD/MM",
                     style = TextStyle(
                         fontFamily = MonaSans,
-                        fontSize = 22.sp,
+                        fontSize = 20.sp,
                         color = Color(0xFFC1C1C1)
                     )
                 )
-            }
+            },
+            isError = errorDay != null || errorMonth != null
         )
 
-        Spacer(Modifier.height(24.dp))
 
-        Button(
-            onClick = { viewModel.onSubmitCardInfo() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .background(color = Color(0xFF1F1F1F), shape = RoundedCornerShape(8.dp)),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text(text = "Continue", fontSize = 16.sp)
+        if (!completeError!!.trim().isNullOrEmpty()) {
+            Text(
+                text = completeError!!,
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+            )
         }
+    }
+
+    Spacer(Modifier.height(24.dp))
+
+    Button(
+        onClick = { viewModel.onSubmitCardInfo() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF1F1F1F), // Black background
+            contentColor = Color.White          // Text color
+        )
+    ) {
+        Text(
+            text = "Continue",
+            fontSize = 16.sp
+        )
     }
 }
