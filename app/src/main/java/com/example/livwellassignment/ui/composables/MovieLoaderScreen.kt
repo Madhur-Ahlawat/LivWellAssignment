@@ -313,10 +313,10 @@ fun VerifyCardScreen(
                         parts.size == 2 && parts[1].length == 2 -> {
                             val day = parts[0].toIntOrNull()
                             val month = parts[1].toIntOrNull()
-                            if(day != null && day in 1..31){
+                            if (day != null && day in 1..31) {
                                 errorDay = null
                             }
-                            if(month != null && month in 1..12){
+                            if (month != null && month in 1..12) {
                                 errorMonth = null
                             }
                             if (day == null || day !in 1..31) {
@@ -337,11 +337,9 @@ fun VerifyCardScreen(
                     }
                     if (errorDay != null && errorMonth != null) {
                         completeError = "Invalid day and month!"
-                    }
-                    else if (errorDay != null) {
+                    } else if (errorDay != null) {
                         completeError = "Invalid " + errorDay
-                    }
-                    else if (errorMonth != null) {
+                    } else if (errorMonth != null) {
                         completeError = "Invalid " + errorMonth
                     }
                     viewModel.changeExpiryDate(
@@ -396,24 +394,25 @@ fun VerifyCardScreen(
                 modifier = Modifier.padding(start = 4.dp, top = 2.dp)
             )
         }
+
+        Spacer(Modifier.height(24.dp))
+
+        Button(
+            onClick = { viewModel.onSubmitCardInfo() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1F1F1F), // Black background
+                contentColor = Color.White          // Text color
+            )
+        ) {
+            Text(
+                text = "Continue",
+                fontSize = 16.sp
+            )
+        }
     }
 
-    Spacer(Modifier.height(24.dp))
-
-    Button(
-        onClick = { viewModel.onSubmitCardInfo() },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF1F1F1F), // Black background
-            contentColor = Color.White          // Text color
-        )
-    ) {
-        Text(
-            text = "Continue",
-            fontSize = 16.sp
-        )
-    }
 }
