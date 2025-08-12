@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "LivWellAssignment"
+rootProject.name = "MyAndroidProject"
 include ':app'
