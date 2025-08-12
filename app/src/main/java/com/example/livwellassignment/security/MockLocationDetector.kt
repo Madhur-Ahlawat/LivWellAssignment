@@ -5,27 +5,25 @@ import android.content.Context
 import android.location.Location
 import android.os.Build
 import android.provider.Settings
-import android.telephony.TelephonyManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import kotlin.math.sqrt
-import android.content.pm.PackageManager
 import android.util.Log
 
 object MockLocationDetector {
     private const val TAG = "MockLocationDetector"
 
     // 1) Simple, primary check - Location.isFromMockProvider() (API 18+)
-    fun isLocationMockedBasic(ctx: Context, location: Location): Boolean {
+    fun isLocationMockedBasic(context: Context, location: Location): Boolean {
         try {
             // API 18+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                 if (location.isFromMockProvider) return true
             }
             // Legacy: ALLOW_MOCK_LOCATION was deprecated in API 23 but still usable as heuristic on old devices
-            val mockAllowed = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ALLOW_MOCK_LOCATION)
+            val mockAllowed = Settings.Secure.getString(context.contentResolver, Settings.Secure.ALLOW_MOCK_LOCATION)
             if (mockAllowed != null && mockAllowed != "0") return true
         } catch (t: Throwable) {
             // ignore
@@ -35,11 +33,11 @@ object MockLocationDetector {
 
     // 2) AppOpsManager check (API 23+)
     // Returns true if mock location op is allowed for some package (or for this UID)
-    fun isMockAppAllowed(ctx: Context): Boolean {
+    fun isMockAppAllowed(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false
         return try {
-            val aom = ctx.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-            val mode = aom.checkOpNoThrow(AppOpsManager.OPSTR_MOCK_LOCATION, android.os.Process.myUid(), ctx.packageName)
+            val aom = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+            val mode = aom.checkOpNoThrow(AppOpsManager.OPSTR_MOCK_LOCATION, android.os.Process.myUid(), context.packageName)
             mode == AppOpsManager.MODE_ALLOWED
         } catch (t: Throwable) {
             false
@@ -47,11 +45,10 @@ object MockLocationDetector {
     }
 
     // 3) Heuristic: look for installed 'known' fake-GPS packages
-    fun isKnownMockingAppInstalled(ctx: Context): Boolean {
+    fun isKnownMockingAppInstalled(context: Context): Boolean {
         val dangerous = listOf(
-            "faker", "mock", "fakegps", "gpsjoy", "joystick", "scrcpy", "vysor", "fake gps", "gps spoof"
-        )
-        val pm = ctx.packageManager
+            "faker", "mock", "fakegps", "gpsjoy", "joystick", "scrcpy", "vysor", "fake gps", "gps spoof", "LocaEdit")
+        val pm = context.packageManager
         val pkgs = pm.getInstalledPackages(0)
         return pkgs.any { p ->
             val name = p.packageName.lowercase()
@@ -60,13 +57,13 @@ object MockLocationDetector {
     }
 
     // 4) Sensor-fusion helper: simple accelerometer movement check vs GPS distance
-    // Usage: call startAccelerometerMonitoring(ctx) when you want to collect sensor samples,
+    // Usage: call startAccelerometerMonitoring(context) when you want to collect sensor samples,
     // feedLocationPair(prevLocation, newLocation, elapsedMillis) to compare motion evidence.
     private var accelRMS = 0.0
     private var accelListener: SensorEventListener? = null
 
-    fun startAccelerometerMonitoring(ctx: Context) {
-        val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    fun startAccelerometerMonitoring(context: Context) {
+        val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val accel = sm.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) ?: sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         accelListener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
@@ -81,8 +78,8 @@ object MockLocationDetector {
         sm.registerListener(accelListener, accel, SensorManager.SENSOR_DELAY_NORMAL)
     }
 
-    fun stopAccelerometerMonitoring(ctx: Context) {
-        val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    fun stopAccelerometerMonitoring(context: Context) {
+        val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         accelListener?.let { sm.unregisterListener(it) }
         accelListener = null
         accelRMS = 0.0
@@ -115,10 +112,10 @@ object MockLocationDetector {
     }
 
     // 5) Combined single-call utility
-    fun isLocationLikelySpoofed(ctx: Context, prev: Location?, newLocation: Location, elapsedMillis: Long): Boolean {
-        if (isLocationMockedBasic(ctx, newLocation)) return true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && isMockAppAllowed(ctx)) return true
-        if (isKnownMockingAppInstalled(ctx)) return true
+    fun isLocationLikelySpoofed(context: Context, prev: Location?, newLocation: Location, elapsedMillis: Long): Boolean {
+        if (isLocationMockedBasic(context, newLocation)) return true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && isMockAppAllowed(context)) return true
+        if (isKnownMockingAppInstalled(context)) return true
         if (isMovementSuspiciousBySensors(prev, newLocation, elapsedMillis)) return true
         // Additional heuristics (e.g., unnatural accuracy values) can be added
         return false

@@ -4,19 +4,21 @@
  - Adds live callbacks so you can respond instantly when a detection is triggered.
 */
 
-package com.example.security
+package com.example.livwellassignment.security
+
 import android.Manifest
 import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
-import android.os.Bundle
+import android.os.Build
 import android.os.Debug
 import android.provider.Settings
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.view.WindowManager
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import com.example.livwellassignment.BuildConfig
 import com.example.livwellassignment.application.LivWellApp
@@ -28,19 +30,20 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
-import java.lang.ref.WeakReference
 import java.security.MessageDigest
 
 object AndroidSecurityChecks {
 
     private var periodicJob: Job? = null
     private var lastFlagSecureState: Boolean? = null
-    private var activityRef: WeakReference<Activity>? = null
+
+    //    private var activityRef: WeakReference<Activity>? = null
     private var phoneStateListener: PhoneStateListener? = null
     private lateinit var appScopedCoroutineScope: CoroutineScope
-    fun init(app: Application) {
+    fun initAppScopedCoroutineScope(app: Application) {
         appScopedCoroutineScope = (app as LivWellApp).applicationScope
     }
+
     fun startLiveDetection(
         context: Context,
         activity: Activity?,
@@ -62,7 +65,7 @@ object AndroidSecurityChecks {
                 delay(intervalMs)
             }
         }
-        startCallDetection(context) { state, number ->
+        startCallDetection(context, activity) { state, number ->
             callback.onCallStateChanged(state, number)
         }
     }
@@ -111,21 +114,26 @@ object AndroidSecurityChecks {
     }
 
     @Suppress("DEPRECATION")
-    private fun isSignatureValid(context: Context): Boolean {
+    private fun isSignatureValid(
+        context: Context, expectedSHA256Signatures: MutableList<String> = mutableListOf(
+            //SHA-256 fingerprint
+            "AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90"
+        )
+    ): Boolean {
         return try {
-            val expectedSignatures = listOf(
-                //SHA-256 fingerprint
-                "AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90"
-            )
             val packageManager = context.packageManager
             val packageName = context.packageName
             val signatures =
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                     val pkgInfo =
-                        packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                        packageManager.getPackageInfo(
+                            packageName,
+                            PackageManager.GET_SIGNING_CERTIFICATES
+                        )
                     pkgInfo.signingInfo?.apkContentsSigners
                 } else {
-                    val pkgInfo = packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
+                    val pkgInfo =
+                        packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
                     pkgInfo.signatures
                 }
             // Converting to SHA-256 fingerprint
@@ -133,7 +141,7 @@ object AndroidSecurityChecks {
             signatures!!.any { sig ->
                 val hash = digest.digest(sig.toByteArray())
                 val fingerprint = hash.joinToString(":") { b -> "%02X".format(b) }
-                expectedSignatures.contains(fingerprint)
+                expectedSHA256Signatures.contains(fingerprint)
             }
         } catch (e: Exception) {
             false
@@ -158,9 +166,8 @@ object AndroidSecurityChecks {
         return false
     }
 
-
     private fun startCallDetection(
-        context: Context,
+        context: Context, activity: Activity?,
         onCallStateChange: (state: Int, number: String?) -> Unit
     ) {
         phoneStateListener = object : PhoneStateListener() {
@@ -176,7 +183,7 @@ object AndroidSecurityChecks {
             telephony.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
         } else {
             ActivityCompat.requestPermissions(
-                context,
+                activity,
                 arrayOf(Manifest.permission.READ_PHONE_STATE),
                 PHONE_STATE_PERMISSION_REQUEST
             )
@@ -200,14 +207,17 @@ object AndroidSecurityChecks {
 
                 // 1️⃣ Known hooking tools
                 if (suspiciousKeywords.any { lower.contains(it) }) return true
+                val parts: List<String> = lower.trim().split("\\s+")
+                if (parts.size < 6) return false
 
+                val path = parts[parts.size - 1]
                 // 2️⃣ Suspicious non-system and non-app libs
-                if (lower.endsWith(".so") || lower.contains("/lib/")) {
-                    if (!lower.contains(myPackage) &&
-                        !lower.startsWith("/system") &&
-                        !lower.startsWith("/apex") &&
-                        !lower.startsWith("/vendor") &&
-                        !lower.startsWith("/product")
+                if (path.endsWith(".so") || path.contains("/lib/")) {
+                    if (!lower.contains(myPackage) ||
+                        !lower.startsWith("/system/") ||
+                        !lower.startsWith("/apex/") ||
+                        !lower.startsWith("/vendor/") ||
+                        !lower.startsWith("/product/")
                     ) {
                         return true
                     }
@@ -219,6 +229,7 @@ object AndroidSecurityChecks {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun detectHookingStackTrace(): Boolean {
         return try {
             throw Exception("check")
@@ -237,14 +248,21 @@ object AndroidSecurityChecks {
                 // 2️⃣ Suspicious stack frame heuristics
                 // - Class not from app or system namespace
                 // - Class loaded from dynamic path
-                if (!cls.startsWith(BuildConfig.APPLICATION_ID.lowercase()) &&
-                    !cls.startsWith("java.") &&
-                    !cls.startsWith("android.") &&
-                    !cls.startsWith("kotlin.") &&
-                    !cls.startsWith("dalvik.") &&
-                    !cls.startsWith("sun.") &&
-                    !cls.startsWith("libcore.")
-                ) {
+                val safeCustomCLassASCPrefix =
+                    AndroidSecurityChecks::class.java.packageName // or any class from your code
+
+                val safePrefixes = listOf(
+                    safeCustomCLassASCPrefix, // your actual code package
+                    "java.",
+                    "android.",
+                    "kotlin.",
+                    "kotlinx",
+                    "dalvik.",
+                    "sun.",
+                    "libcore."
+                )
+
+                if (safePrefixes.none { cls.startsWith(it) }) {
                     return true
                 }
 
@@ -258,39 +276,17 @@ object AndroidSecurityChecks {
         return (flags and WindowManager.LayoutParams.FLAG_SECURE) != 0
     }
 
-    fun initFlagSecureMonitoring(app: Application, callback: SecurityCallback) {
-        app.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
-            override fun onActivityStarted(activity: Activity) {
-                setActivity(activity)
-            }
-            override fun onActivityResumed(activity: Activity) {
-                setActivity(activity)
-            }
-            override fun onActivityPaused(activity: Activity) {}
-            override fun onActivityStopped(activity: Activity) {}
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
-            override fun onActivityDestroyed(activity: Activity) {
-                stopLiveDetection(app)
-                if (getActivity() == activity) setActivity(null)
-            }
-        })
+    fun initFlagSecureMonitoring(app: LivWellApp, callback: SecurityCallback) {
         appScopedCoroutineScope.launch {
             while (isActive) {
-                val secureSet = getActivity()?.let { isFlagSecureSet(it) } ?: lastFlagSecureState ?: true
+                val secureSet =
+                    app.getActivity()?.let { isFlagSecureSet(it) } ?: lastFlagSecureState ?: true
                 if (lastFlagSecureState == null || lastFlagSecureState != secureSet) {
                     lastFlagSecureState = secureSet
-                    if(!secureSet) callback.onFlagSecureDisabled()
+                    if (!secureSet) callback.onFlagSecureDisabled()
                 }
                 delay(1000)
             }
         }
-    }
-    fun setActivity(activity: Activity?) {
-        activityRef = WeakReference(activity)
-    }
-
-    fun getActivity(): Activity? {
-        return activityRef?.get()
     }
 }
