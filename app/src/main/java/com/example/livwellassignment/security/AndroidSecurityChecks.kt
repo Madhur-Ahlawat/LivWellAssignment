@@ -5,6 +5,7 @@
 */
 
 package com.example.security
+import android.Manifest
 import android.app.Activity
 import android.app.Application
 import android.content.Context
@@ -16,10 +17,12 @@ import android.provider.Settings
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.view.WindowManager
+import androidx.core.app.ActivityCompat
 import com.example.livwellassignment.BuildConfig
+import com.example.livwellassignment.application.LivWellApp
 import com.example.livwellassignment.security.SecurityCallback
+import com.example.livwellassignment.util.PHONE_STATE_PERMISSION_REQUEST
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -33,7 +36,11 @@ object AndroidSecurityChecks {
     private var periodicJob: Job? = null
     private var lastFlagSecureState: Boolean? = null
     private var activityRef: WeakReference<Activity>? = null
-
+    private var phoneStateListener: PhoneStateListener? = null
+    private lateinit var appScopedCoroutineScope: CoroutineScope
+    fun init(app: Application) {
+        appScopedCoroutineScope = (app as LivWellApp).applicationScope
+    }
     fun startLiveDetection(
         context: Context,
         activity: Activity?,
@@ -42,7 +49,7 @@ object AndroidSecurityChecks {
         lastLocationProvider: (() -> Location?)? = null
     ) {
         if (periodicJob?.isActive == true) return
-        periodicJob = CoroutineScope(Dispatchers.Default).launch {
+        periodicJob = appScopedCoroutineScope.launch {
             while (isActive) {
                 if (isDebuggerAttached()) callback.onDebuggerDetected()
                 if (isHooked()) callback.onHookDetected()
@@ -151,19 +158,29 @@ object AndroidSecurityChecks {
         return false
     }
 
-    private var phoneStateListener: PhoneStateListener? = null
 
     private fun startCallDetection(
         context: Context,
         onCallStateChange: (state: Int, number: String?) -> Unit
     ) {
-        val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         phoneStateListener = object : PhoneStateListener() {
             override fun onCallStateChanged(state: Int, phoneNumber: String?) {
                 onCallStateChange(state, phoneNumber)
             }
         }
-        telephony.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
+        if (ActivityCompat.checkSelfPermission(
+                context, Manifest.permission.READ_PHONE_STATE
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            telephony.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
+        } else {
+            ActivityCompat.requestPermissions(
+                context,
+                arrayOf(Manifest.permission.READ_PHONE_STATE),
+                PHONE_STATE_PERMISSION_REQUEST
+            )
+        }
     }
 
     private fun stopCallDetection(context: Context) {
@@ -236,21 +253,6 @@ object AndroidSecurityChecks {
         }
     }
 
-    private fun monitorFlagSecure(activity: Activity, callback: (Boolean) -> Unit) {
-        CoroutineScope(Dispatchers.Default).launch {
-            while (isActive) {
-                val secureSet = isFlagSecureSet(activity)
-
-                if (lastFlagSecureState == null || lastFlagSecureState != secureSet) {
-                    lastFlagSecureState = secureSet
-                    callback(secureSet) // true = enabled, false = disabled
-                }
-
-                delay(1000) // check every 1 second
-            }
-        }
-    }
-
     private fun isFlagSecureSet(activity: Activity): Boolean {
         val flags = activity.window.attributes.flags
         return (flags and WindowManager.LayoutParams.FLAG_SECURE) != 0
@@ -269,11 +271,11 @@ object AndroidSecurityChecks {
             override fun onActivityStopped(activity: Activity) {}
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
             override fun onActivityDestroyed(activity: Activity) {
+                stopLiveDetection(app)
                 if (getActivity() == activity) setActivity(null)
             }
         })
-
-        CoroutineScope(Dispatchers.Default).launch {
+        appScopedCoroutineScope.launch {
             while (isActive) {
                 val secureSet = getActivity()?.let { isFlagSecureSet(it) } ?: lastFlagSecureState ?: true
                 if (lastFlagSecureState == null || lastFlagSecureState != secureSet) {
@@ -285,7 +287,7 @@ object AndroidSecurityChecks {
         }
     }
     fun setActivity(activity: Activity?) {
-        activityRef = null
+        activityRef = WeakReference(activity)
     }
 
     fun getActivity(): Activity? {

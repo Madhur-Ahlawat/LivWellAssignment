@@ -1,15 +1,21 @@
 package com.example.livwellassignment.application
 
 import android.app.Application
+import android.telephony.TelephonyManager
 import android.util.Log
 import com.example.livwellassignment.security.SecurityCallback
 import com.example.security.AndroidSecurityChecks
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 
 @HiltAndroidApp
-class LivWellApp: Application() {
+class LivWellApp : Application() {
     var securityCallback: SecurityCallback? = null
-        get() = securityCallback!!
+    var applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
         securityCallback = object : SecurityCallback {
@@ -42,9 +48,18 @@ class LivWellApp: Application() {
             }
 
             override fun onCallStateChanged(state: Int, number: String?) {
-                Log.e("Security", "Phone all detected!")
+                when (state) {
+                    TelephonyManager.CALL_STATE_IDLE -> { /* No active call */ }
+                    TelephonyManager.CALL_STATE_RINGING -> { /* Incoming call */ }
+                    TelephonyManager.CALL_STATE_OFFHOOK -> { /* Call answered */ }
+                }
             }
         }
-        AndroidSecurityChecks.initFlagSecureMonitoring(this,securityCallback!!)
+        AndroidSecurityChecks.init(this)
+        AndroidSecurityChecks.initFlagSecureMonitoring(this, securityCallback!!)
+    }
+    override fun onTerminate() {
+        super.onTerminate()
+        applicationScope.cancel()
     }
 }
