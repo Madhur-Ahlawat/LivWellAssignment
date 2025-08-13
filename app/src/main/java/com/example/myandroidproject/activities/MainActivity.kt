@@ -43,7 +43,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         mContext = this
         mApplicationContext = application as MyAndroidProjectApp
-
         AppPermissionManager.init(mApplicationContext!!)
         AppPermissionManager.requestNextPermission(mApplicationContext!!) { permissionData ->
             println("Permission granted for: ${permissionData.permission}")

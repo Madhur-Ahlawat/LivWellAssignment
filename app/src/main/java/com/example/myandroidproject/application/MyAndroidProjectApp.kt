@@ -1,5 +1,6 @@
 package com.example.myandroidproject.application
 
+import AppPermissionManager
 import android.app.Activity
 import android.app.Application
 import android.content.Context
@@ -11,7 +12,6 @@ import com.example.myandroidproject.security.AndroidSecurityChecks.stopLiveDetec
 import com.example.myandroidproject.security.MockLocationDetector.stopAccelerometerMonitoring
 import com.example.myandroidproject.security.SecurityCallback
 import com.example.myandroidproject.util.registerUsbReceiver
-import com.example.utils.AppPermissionManager
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

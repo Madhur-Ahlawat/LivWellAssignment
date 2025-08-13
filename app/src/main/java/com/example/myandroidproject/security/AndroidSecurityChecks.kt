@@ -6,7 +6,7 @@
 
 package com.example.myandroidproject.security
 
-import android.Manifest
+import AppPermissionManager
 import android.app.Activity
 import android.app.Application
 import android.content.Context
@@ -19,13 +19,10 @@ import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.view.WindowManager
 import androidx.annotation.RequiresApi
-import androidx.core.app.ActivityCompat
 import com.example.myandroidproject.BuildConfig
 import com.example.myandroidproject.application.MyAndroidProjectApp
 import com.example.myandroidproject.util.ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE
 import com.example.myandroidproject.util.ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE
-import com.example.myandroidproject.util.PHONE_STATE_PERMISSION_REQUEST
-import com.example.utils.AppPermissionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -35,8 +32,6 @@ import java.io.File
 import java.security.MessageDigest
 
 object AndroidSecurityChecks {
-
-    private var periodicJob: Job? = null
     private var lastFlagSecureState: Boolean? = null
 
     //    private var activityRef: WeakReference<Activity>? = null
@@ -50,40 +45,33 @@ object AndroidSecurityChecks {
     fun startLiveDetection(
         context: Context,
         activity: Activity?,
+        permissionData: AppPermissionManager.PermissionData,
         callback: SecurityCallback,
         intervalMs: Long = 5000L,
         lastLocationProvider: (() -> Location?)? = null
     ) {
-        if (periodicJob?.isActive == true) return
 
-        periodicJob = appScopedCoroutineScope.launch {
+        appScopedCoroutineScope.launch {
             if (isDebuggerAttached()) callback.onDebuggerDetected()
             if (isHooked()) callback.onHookDetected()
             if (!isFromTrustedInstaller(context)) callback.onUntrustedInstaller()
             if (!isSignatureValid(context)) callback.onSignatureInvalid()
             if (hasKnownScreenCaptureApps(context)) callback.onScreenCaptureAppDetected()
             if (activity != null && !isFlagSecureSet(activity)) callback.onFlagSecureDisabled()
-            AppPermissionManager.requestPermissions(context.applicationContext as MyAndroidProjectApp) {
-                //already granted permissions
-                    permissionData ->
-                if (permissionData!!.requestCode == ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE || permissionData!!.requestCode == ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE) {
-                    val loc = lastLocationProvider?.invoke()
-                    if (loc != null && isLocationMocked(
-                            context,
-                            loc
-                        )
-                    ) callback.onMockLocationDetected()
-                }
-            }
         }
-        startCallDetection(context, activity) { state, number ->
-            callback.onCallStateChanged(state, number)
+        appScopedCoroutineScope.launch {
+            val loc = lastLocationProvider?.invoke()
+            if (loc != null && isLocationMocked(context, loc)
+            ) callback.onMockLocationDetected()
+        }
+        appScopedCoroutineScope.launch {
+            startCallDetection(context, activity) { state, number ->
+                callback.onCallStateChanged(state, number)
+            }
         }
     }
 
     fun stopLiveDetection(context: Context) {
-        periodicJob?.cancel()
-        periodicJob = null
         stopCallDetection(context)
     }
 

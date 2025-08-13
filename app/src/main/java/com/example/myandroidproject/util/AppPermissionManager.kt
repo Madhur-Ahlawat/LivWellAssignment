@@ -8,6 +8,8 @@ import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.myandroidproject.application.MyAndroidProjectApp
+import com.example.myandroidproject.security.AndroidSecurityChecks.isLocationMocked
+import com.example.myandroidproject.security.AndroidSecurityChecks.startLiveDetection
 import com.example.myandroidproject.util.ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE
 import com.example.myandroidproject.util.ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE
 import com.example.myandroidproject.util.CAMERA_PERMISSION_REQUEST_CODE
@@ -58,6 +60,7 @@ object AppPermissionManager {
             ) {
                 // Already granted, move to the next immediately
                 onGranted(permissionData)
+               startLiveDetection(context = application,application = application)
                 requestNextPermission(application, onGranted)
             } else {
                 requestInternal(activity, permissionData)
