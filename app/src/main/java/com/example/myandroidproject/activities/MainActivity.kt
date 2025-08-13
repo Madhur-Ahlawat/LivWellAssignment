@@ -1,10 +1,10 @@
 package com.example.myandroidproject.activities
 
+import AppPermissionManager
 import android.Manifest
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,16 +24,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myandroidproject.application.MyAndroidProjectApp
-import com.example.myandroidproject.security.AndroidSecurityChecks
-import com.example.myandroidproject.security.MockLocationDetector
 import com.example.myandroidproject.ui.composables.VerifyCardScreen
 import com.example.myandroidproject.ui.theme.MyAndroidProjectTheme
-import com.example.myandroidproject.util.MockLocationUtil
-import com.example.myandroidproject.util.MockLocationUtil.startLocationUpdates
 import com.example.myandroidproject.viewmodels.MovieViewModel
-import com.example.utils.AppPermissionManager
 import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -47,24 +41,16 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
-        window.setDecorFitsSystemWindows(false)
         mContext = this
-        mApplicationContext = mContext!!.applicationContext as MyAndroidProjectApp
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        mApplicationContext = application as MyAndroidProjectApp
+
+        AppPermissionManager.init(mApplicationContext!!)
+        AppPermissionManager.requestNextPermission(mApplicationContext!!) { permissionData ->
+            println("Permission granted for: ${permissionData.permission}")
+        }
+
         initUI()
-        AndroidSecurityChecks.startLiveDetection(
-            mContext!!,
-            this,
-            mApplicationContext!!.getSecurityCallback()!!
-        )
-        MockLocationDetector.startAccelerometerMonitoring(mContext!!)
-        startLocationUpdates(mContext!!, this, fusedLocationClient!!)
-        MockLocationUtil.setMockLocation(
-            context = mContext!!,
-            latitude = 37.4219999,
-            longitude = -122.0840575
-        )
+        // rest of your setup...
     }
 
     fun initUI() {
@@ -98,27 +84,20 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onRequestPermissionsResult(
-        requestCodeFromCallback: Int,
-        permissionsAccessResponse: Array<out String>,
+        requestCode: Int,
+        permissions: Array<out String>,
         grantResults: IntArray,
         deviceId: Int
     ) {
-        super.onRequestPermissionsResult(
-            requestCodeFromCallback,
-            permissionsAccessResponse,
-            grantResults,
-            deviceId
-        )
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults, deviceId)
 
         AppPermissionManager.handlePermissionResult(
             mApplicationContext!!,
-            requestCodeFromCallback,
-            permissionsAccessResponse,
+            requestCode,
+            permissions,
             grantResults
-        ) {
-            //Granted permission
-                permissionData ->
-            println("Permission granted for: ${permissionData!!.permission}")
+        ) { permissionData ->
+            println("Permission granted for: ${permissionData.permission}")
         }
     }
 }

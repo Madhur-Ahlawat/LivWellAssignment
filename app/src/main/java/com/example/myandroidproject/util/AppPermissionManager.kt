@@ -1,6 +1,3 @@
-// AppPermissionManager.kt
-package com.example.utils
-
 import android.Manifest
 import android.app.Activity
 import android.app.Application
@@ -12,97 +9,68 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.myandroidproject.application.MyAndroidProjectApp
 import com.example.myandroidproject.util.ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE
-import com.example.myandroidproject.util.CAMERA_PERMISSION_REQUEST_CODE
 import com.example.myandroidproject.util.ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE
+import com.example.myandroidproject.util.CAMERA_PERMISSION_REQUEST_CODE
 import com.example.myandroidproject.util.PHONE_STATE_PERMISSION_REQUEST
 
 object AppPermissionManager {
+    private var permissionsRequestQueue = ArrayDeque<PermissionData>()
+
     var permissionsRequestList = arrayOf(
-        AppPermissionManager.PermissionData(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE
-        ),
-        AppPermissionManager.PermissionData(
-            Manifest.permission.CAMERA,
-            CAMERA_PERMISSION_REQUEST_CODE
-        ),
-        AppPermissionManager.PermissionData(
-            Manifest.permission.READ_PHONE_STATE,
-            PHONE_STATE_PERMISSION_REQUEST
-        ),
-        AppPermissionManager.PermissionData(
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE
-        )
+        PermissionData(Manifest.permission.ACCESS_FINE_LOCATION, ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE),
+        PermissionData(Manifest.permission.CAMERA, CAMERA_PERMISSION_REQUEST_CODE),
+        PermissionData(Manifest.permission.READ_PHONE_STATE, PHONE_STATE_PERMISSION_REQUEST),
+        PermissionData(Manifest.permission.ACCESS_COARSE_LOCATION, ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE)
     )
+
     fun init(application: MyAndroidProjectApp) {
         application.registerActivityLifecycleCallbacks(object :
             Application.ActivityLifecycleCallbacks {
             override fun onActivityResumed(activity: Activity) {
                 application.setActivity(activity)
             }
-
             override fun onActivityPaused(activity: Activity) {
                 if (application.getActivity() == activity) application.setActivity(activity)
             }
-
             override fun onActivityCreated(a: Activity, b: android.os.Bundle?) {}
             override fun onActivityStarted(a: Activity) {}
             override fun onActivityStopped(a: Activity) {}
             override fun onActivitySaveInstanceState(a: Activity, outState: android.os.Bundle) {}
             override fun onActivityDestroyed(a: Activity) {}
         })
+
+        permissionsRequestQueue.clear()
+        permissionsRequestList.forEach { permissionsRequestQueue.add(it) }
     }
 
-    fun requestPermissionWithLoop(
+    fun requestNextPermission(
         application: MyAndroidProjectApp,
-        permissionData: PermissionData,
-        onGranted:((permissionData: PermissionData?) -> Unit)
+        onGranted: (PermissionData) -> Unit
     ) {
-        if (ContextCompat.checkSelfPermission(
-                application.getActivity(),
-                permissionData.permission
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            onGranted.invoke(permissionData)
-        } else {
-            requestInternal(application.getActivity()!!, permissionData, onGranted)
+        val permissionData = permissionsRequestQueue.removeFirstOrNull()
+        if (permissionData != null) {
+            val activity = application.getActivity() ?: return
+
+            if (ContextCompat.checkSelfPermission(
+                    activity,
+                    permissionData.permission
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                // Already granted, move to the next immediately
+                onGranted(permissionData)
+                requestNextPermission(application, onGranted)
+            } else {
+                requestInternal(activity, permissionData)
+            }
         }
     }
 
-    private fun requestInternal(
-        activity: Activity,
-        permissionData: PermissionData?,
-        onGranted: (permissionData: PermissionData?) -> Unit
-    ) {
-        when {
-            ContextCompat.checkSelfPermission(
-                activity,
-                permissionData!!.permission
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                onGranted(permissionData)
-            }
-
-            ActivityCompat.shouldShowRequestPermissionRationale(
-                activity,
-                permissionData.permission
-            ) -> {
-                // Show rationale dialog here before re-requesting
-                ActivityCompat.requestPermissions(
-                    activity,
-                    arrayOf(permissionData.permission),
-                    permissionData.requestCode
-                )
-            }
-
-            else -> {
-                ActivityCompat.requestPermissions(
-                    activity,
-                    arrayOf(permissionData.permission),
-                    permissionData.requestCode
-                )
-            }
-        }
+    private fun requestInternal(activity: Activity, permissionData: PermissionData) {
+        ActivityCompat.requestPermissions(
+            activity,
+            arrayOf(permissionData.permission),
+            permissionData.requestCode
+        )
     }
 
     fun handlePermissionResult(
@@ -110,26 +78,20 @@ object AppPermissionManager {
         requestCodeFromCallback: Int,
         permissionsFromCallback: Array<out String>,
         grantResults: IntArray,
-        onGranted: (permissionData: PermissionData?) -> Unit
+        onGranted: (PermissionData) -> Unit
     ) {
-        val activity = application.getActivity() ?: return
-        var permissionData:PermissionData?=null
-        when(requestCodeFromCallback){
-            CAMERA_PERMISSION_REQUEST_CODE->{
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    permissionData = PermissionData(android.Manifest.permission.CAMERA,CAMERA_PERMISSION_REQUEST_CODE)
-                    onGranted(permissionData)
-                } else {
-                    val permission = permissionsFromCallback[0]
-                    if (ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)) {
-                        requestInternal(activity, permissionData, onGranted)
-                    } else {
-                        redirectToSettings(activity)
-                    }
-                }
+        val permissionData = permissionsRequestList.find { it.requestCode == requestCodeFromCallback }
+            ?: return
+
+        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            onGranted(permissionData)
+            requestNextPermission(application, onGranted) // move to next
+        } else {
+            val activity = application.getActivity() ?: return
+            val permission = permissionsFromCallback[0]
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)) {
+                redirectToSettings(activity)
             }
-            ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE->{}
-            PHONE_STATE_PERMISSION_REQUEST->{}
         }
     }
 
@@ -138,14 +100,6 @@ object AppPermissionManager {
             data = Uri.fromParts("package", activity.packageName, null)
         }
         activity.startActivity(intent)
-    }
-
-    fun requestPermissions(application: MyAndroidProjectApp, onPermissionGranted: (permissionData: PermissionData?) -> Unit) {
-        permissionsRequestList.forEach { value ->
-            requestPermissionWithLoop(application,
-                value, onPermissionGranted
-            )
-        }
     }
 
     data class PermissionData(var permission: String, var requestCode: Int)
