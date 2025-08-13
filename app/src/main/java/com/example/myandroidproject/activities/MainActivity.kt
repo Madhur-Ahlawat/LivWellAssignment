@@ -28,9 +28,14 @@ import com.example.myandroidproject.security.AndroidSecurityChecks
 import com.example.myandroidproject.security.MockLocationDetector
 import com.example.myandroidproject.ui.composables.VerifyCardScreen
 import com.example.myandroidproject.ui.theme.LivWellAssignmentTheme
+import com.example.myandroidproject.util.ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE
+import com.example.myandroidproject.util.ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE
+import com.example.myandroidproject.util.CAMERA_PERMISSION_REQUEST_CODE
 import com.example.myandroidproject.util.MockLocationUtil
 import com.example.myandroidproject.util.MockLocationUtil.startLocationUpdates
+import com.example.myandroidproject.util.PHONE_STATE_PERMISSION_REQUEST
 import com.example.myandroidproject.viewmodels.MovieViewModel
+import com.example.utils.AppPermissionManager
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import dagger.hilt.android.AndroidEntryPoint
@@ -55,7 +60,7 @@ class MainActivity : ComponentActivity() {
         AndroidSecurityChecks.startLiveDetection(
             mContext!!,
             this,
-            mApplicationContext!!.securityCallback!!
+            mApplicationContext!!.getSecurityCallback()!!
         )
         MockLocationDetector.startAccelerometerMonitoring(mContext!!)
         startLocationUpdates(mContext!!, this, fusedLocationClient!!)
@@ -93,6 +98,31 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCodeFromCallback: Int,
+        permissionsAccessResponse: Array<out String>,
+        grantResults: IntArray,
+        deviceId: Int
+    ) {
+        super.onRequestPermissionsResult(
+            requestCodeFromCallback,
+            permissionsAccessResponse,
+            grantResults,
+            deviceId
+        )
+
+        AppPermissionManager.handlePermissionResult(
+            mApplicationContext!!,
+            requestCodeFromCallback,
+            permissionsAccessResponse,
+            grantResults
+        ) {
+            //Granted permission
+                permissionData ->
+            println("Permission granted for: ${permissionData!!.permission}")
         }
     }
 }

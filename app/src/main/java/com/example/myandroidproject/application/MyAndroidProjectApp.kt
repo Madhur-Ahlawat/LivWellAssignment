@@ -11,6 +11,7 @@ import com.example.myandroidproject.security.AndroidSecurityChecks.stopLiveDetec
 import com.example.myandroidproject.security.MockLocationDetector.stopAccelerometerMonitoring
 import com.example.myandroidproject.security.SecurityCallback
 import com.example.myandroidproject.util.registerUsbReceiver
+import com.example.utils.AppPermissionManager
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,15 +24,15 @@ class MyAndroidProjectApp : Application() {
     private var activityRef: WeakReference<Activity>?=null
     private var appContext: MyAndroidProjectApp? = null
     private var appLifecycleCallback: ActivityLifecycleCallbacks? = null
-    private var currentActivity: Activity? = null
-    var securityCallback: SecurityCallback? = null
-    var applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    var mContext: Context? = null
-
+    private var securityCallback: SecurityCallback? = null
+    private var applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var mContext: Context? = null
     override fun onCreate() {
         super.onCreate()
         mContext = this
         appContext = this
+        AppPermissionManager.init(appContext!!)
+
         appLifecycleCallback = object : ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
             override fun onActivityStarted(activity: Activity) {
@@ -112,5 +113,13 @@ class MyAndroidProjectApp : Application() {
 
     fun getActivity(): Activity? {
         return activityRef?.get()
+    }
+
+    fun getSecurityCallback(): SecurityCallback? {
+        return securityCallback
+    }
+
+    fun getApplicationScope(): CoroutineScope {
+        return applicationScope
     }
 }
