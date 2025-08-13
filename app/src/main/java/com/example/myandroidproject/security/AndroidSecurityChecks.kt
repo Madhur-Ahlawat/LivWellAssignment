@@ -187,19 +187,8 @@ object AndroidSecurityChecks {
                 onCallStateChange(state, phoneNumber)
             }
         }
-        if (ActivityCompat.checkSelfPermission(
-                context, Manifest.permission.READ_PHONE_STATE
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-            telephony.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
-        } else {
-            ActivityCompat.requestPermissions(
-                activity,
-                arrayOf(Manifest.permission.READ_PHONE_STATE),
-                PHONE_STATE_PERMISSION_REQUEST
-            )
-        }
+        val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        telephony.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
     }
 
     private fun stopCallDetection(context: Context) {

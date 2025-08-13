@@ -116,7 +116,6 @@ object AppPermissionManager {
         var permissionData:PermissionData?=null
         when(requestCodeFromCallback){
             CAMERA_PERMISSION_REQUEST_CODE->{
-
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     permissionData = PermissionData(android.Manifest.permission.CAMERA,CAMERA_PERMISSION_REQUEST_CODE)
                     onGranted(permissionData)

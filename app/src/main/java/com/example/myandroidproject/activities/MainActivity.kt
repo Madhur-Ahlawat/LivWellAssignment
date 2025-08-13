@@ -27,13 +27,9 @@ import com.example.myandroidproject.application.MyAndroidProjectApp
 import com.example.myandroidproject.security.AndroidSecurityChecks
 import com.example.myandroidproject.security.MockLocationDetector
 import com.example.myandroidproject.ui.composables.VerifyCardScreen
-import com.example.myandroidproject.ui.theme.LivWellAssignmentTheme
-import com.example.myandroidproject.util.ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE
-import com.example.myandroidproject.util.ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE
-import com.example.myandroidproject.util.CAMERA_PERMISSION_REQUEST_CODE
+import com.example.myandroidproject.ui.theme.MyAndroidProjectTheme
 import com.example.myandroidproject.util.MockLocationUtil
 import com.example.myandroidproject.util.MockLocationUtil.startLocationUpdates
-import com.example.myandroidproject.util.PHONE_STATE_PERMISSION_REQUEST
 import com.example.myandroidproject.viewmodels.MovieViewModel
 import com.example.utils.AppPermissionManager
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -74,7 +70,7 @@ class MainActivity : ComponentActivity() {
     fun initUI() {
         enableEdgeToEdge()
         setContent {
-            LivWellAssignmentTheme {
+            MyAndroidProjectTheme {
                 viewModel = hiltViewModel()
                 val defaultDarkTheme = isSystemInDarkTheme()
                 var isDarkTheme by rememberSaveable { mutableStateOf(defaultDarkTheme) }
