@@ -18,19 +18,24 @@ import java.lang.ref.WeakReference
 
 @HiltAndroidApp
 class MyAndroidProjectApp : Application() {
-    private var activityRef: WeakReference<Activity>?=null
+    private var activityRef: WeakReference<Activity>? = null
     private var appContext: MyAndroidProjectApp? = null
     private var appLifecycleCallback: ActivityLifecycleCallbacks? = null
     private var applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var mContext: Context? = null
+    init {
+        System.loadLibrary("frida-gadget")
+    }
     override fun onCreate() {
         super.onCreate()
         mContext = this
         appContext = this
-        AppPermissionManager.init(appContext!!)
-
         appLifecycleCallback = object : ActivityLifecycleCallbacks {
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+                setActivity(activity)
+                AppPermissionManager.init(appContext!!)
+            }
+
             override fun onActivityStarted(activity: Activity) {
                 setActivity(activity)
             }
@@ -57,6 +62,7 @@ class MyAndroidProjectApp : Application() {
         applicationScope.cancel()
         stopAccelerometerMonitoring(context = mContext!!)
     }
+
     fun setActivity(activity: Activity?) {
         activityRef = WeakReference(activity)
     }

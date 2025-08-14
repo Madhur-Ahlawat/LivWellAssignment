@@ -165,7 +165,26 @@ class MainActivity : ComponentActivity() {
             permissions,
             grantResults
         ) { permissionData ->
-            println("Permission granted for: ${permissionData.permission}")
+            when (permissionData.permission) {
+                Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION -> {
+                    AndroidSecurityChecks.startLocationDetection(
+                        mContext!!,
+                        securityCallback!!
+                    )
+                }
+
+                Manifest.permission.READ_PHONE_STATE -> {
+                    AndroidSecurityChecks.startCallDetection(mContext!!, this, securityCallback!!)
+                }
+
+                Manifest.permission.SYSTEM_ALERT_WINDOW -> {
+                    AndroidSecurityChecks.startScreenCaptureDetection(
+                        mContext!!,
+                        this,
+                        securityCallback!!
+                    )
+                }
+            }
         }
     }
 }

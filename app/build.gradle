@@ -60,6 +60,12 @@ android {
     buildFeatures {
         compose true
     }
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
+    }
+
 }
 
 dependencies {
