@@ -6,25 +6,21 @@
 
 package com.example.myandroidproject.security
 
-import AppPermissionManager
+import android.Manifest
 import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Location
 import android.os.Build
 import android.os.Debug
-import android.provider.Settings
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.view.WindowManager
 import androidx.annotation.RequiresApi
+import androidx.core.app.ActivityCompat
 import com.example.myandroidproject.BuildConfig
 import com.example.myandroidproject.application.MyAndroidProjectApp
-import com.example.myandroidproject.util.ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE
-import com.example.myandroidproject.util.ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -39,36 +35,6 @@ object AndroidSecurityChecks {
     private lateinit var appScopedCoroutineScope: CoroutineScope
     fun initAppScopedCoroutineScope(app: Application) {
         appScopedCoroutineScope = (app as MyAndroidProjectApp).getApplicationScope()
-    }
-
-    @RequiresApi(Build.VERSION_CODES.S)
-    fun startLiveDetection(
-        context: Context,
-        activity: Activity?,
-        permissionData: AppPermissionManager.PermissionData,
-        callback: SecurityCallback,
-        intervalMs: Long = 5000L,
-        lastLocationProvider: (() -> Location?)? = null
-    ) {
-
-        appScopedCoroutineScope.launch {
-            if (isDebuggerAttached()) callback.onDebuggerDetected()
-            if (isHooked()) callback.onHookDetected()
-            if (!isFromTrustedInstaller(context)) callback.onUntrustedInstaller()
-            if (!isSignatureValid(context)) callback.onSignatureInvalid()
-            if (hasKnownScreenCaptureApps(context)) callback.onScreenCaptureAppDetected()
-            if (activity != null && !isFlagSecureSet(activity)) callback.onFlagSecureDisabled()
-        }
-        appScopedCoroutineScope.launch {
-            val loc = lastLocationProvider?.invoke()
-            if (loc != null && isLocationMocked(context, loc)
-            ) callback.onMockLocationDetected()
-        }
-        appScopedCoroutineScope.launch {
-            startCallDetection(context, activity) { state, number ->
-                callback.onCallStateChanged(state, number)
-            }
-        }
     }
 
     fun stopLiveDetection(context: Context) {
@@ -156,14 +122,6 @@ object AndroidSecurityChecks {
             val name = p.packageName.lowercase()
             dangerous.any { name.contains(it) }
         }
-    }
-
-    private fun isLocationMocked(context: Context, location: Location): Boolean {
-        if (location.isFromMockProvider) return true
-        val mockAllowed =
-            Settings.Secure.getString(context.contentResolver, Settings.Secure.ALLOW_MOCK_LOCATION)
-        if (mockAllowed != null && mockAllowed != "0") return true
-        return false
     }
 
     private fun startCallDetection(
@@ -265,7 +223,7 @@ object AndroidSecurityChecks {
         return (flags and WindowManager.LayoutParams.FLAG_SECURE) != 0
     }
 
-    fun initFlagSecureMonitoring(app: MyAndroidProjectApp, callback: SecurityCallback) {
+    fun startFlagSecureMonitoring(app: MyAndroidProjectApp, callback: SecurityCallback) {
         appScopedCoroutineScope.launch {
             while (isActive) {
                 val secureSet =
@@ -276,6 +234,51 @@ object AndroidSecurityChecks {
                 }
                 delay(1000)
             }
+        }
+    }
+
+    fun startCallDetection(context: Context, activity: Activity?, callback: SecurityCallback) {
+        appScopedCoroutineScope.launch {
+            startCallDetection(context, activity) { state, number ->
+                callback.onCallStateChanged(state, number)
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    fun startHookDetection(context: Context, activity: Activity?, callback: SecurityCallback) {
+        appScopedCoroutineScope.launch {
+            if (isDebuggerAttached()) callback.onDebuggerDetected()
+            if (isHooked()) callback.onHookDetected()
+            if (!isFromTrustedInstaller(context)) callback.onUntrustedInstaller()
+            if (!isSignatureValid(context)) callback.onSignatureInvalid()
+        }
+    }
+
+    fun startScreenCaptureDetection(
+        context: Context,
+        activity: Activity?,
+        callback: SecurityCallback
+    ) {
+        appScopedCoroutineScope.launch {
+            if (hasKnownScreenCaptureApps(context)) callback.onScreenCaptureAppDetected()
+            if (activity != null && !isFlagSecureSet(activity)) callback.onFlagSecureDisabled()
+        }
+    }
+
+    fun startLocationDetection(context: Context, callback: SecurityCallback) {
+        appScopedCoroutineScope.launch {
+           if (ActivityCompat.checkSelfPermission(
+                   context,
+                   Manifest.permission.ACCESS_FINE_LOCATION
+               ) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(
+                   context,
+                   Manifest.permission.ACCESS_COARSE_LOCATION
+               ) != PackageManager.PERMISSION_GRANTED
+           ) {
+               return@launch
+           }
+            MockLocationDetector.startMockLocationChecks(context,callback)
         }
     }
 }
