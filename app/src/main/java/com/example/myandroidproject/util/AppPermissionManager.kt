@@ -59,17 +59,13 @@ object AppPermissionManager {
                 // Already granted, move to the next immediately
                 onGranted(permissionData)
             } else {
-                requestInternal(activity, permissionData)
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(permissionData.permission),
+                    permissionData.requestCode
+                )
             }
         }
-    }
-
-    private fun requestInternal(activity: Activity, permissionData: PermissionData) {
-        ActivityCompat.requestPermissions(
-            activity,
-            arrayOf(permissionData.permission),
-            permissionData.requestCode
-        )
     }
 
     fun handlePermissionResult(

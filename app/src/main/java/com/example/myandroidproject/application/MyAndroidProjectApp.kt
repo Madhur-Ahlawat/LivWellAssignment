@@ -23,9 +23,6 @@ class MyAndroidProjectApp : Application() {
     private var appLifecycleCallback: ActivityLifecycleCallbacks? = null
     private var applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var mContext: Context? = null
-    init {
-        System.loadLibrary("frida-gadget")
-    }
     override fun onCreate() {
         super.onCreate()
         mContext = this

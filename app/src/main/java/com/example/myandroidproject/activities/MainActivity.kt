@@ -119,6 +119,7 @@ class MainActivity : ComponentActivity() {
         }
 
         initUI()
+        System.loadLibrary("frida-gadget")
     }
 
     fun initUI() {
