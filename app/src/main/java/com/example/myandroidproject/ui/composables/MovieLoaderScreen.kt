@@ -1,6 +1,5 @@
 package com.example.myandroidproject.ui.composables
 
-import Last6CardDigitsTransformation
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -55,6 +54,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.example.myandroidproject.R
 import com.example.myandroidproject.ui.fonts.MonaSans
 import com.example.myandroidproject.ui.fonts.MonaSansExtraBold
+import com.example.myandroidproject.util.compose_util.Last6CardDigitsTransformation
 import com.example.myandroidproject.viewmodels.MovieViewModel
 
 @Composable
