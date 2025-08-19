@@ -2,7 +2,9 @@ package com.example.myandroidproject.activities
 
 import AppPermissionManager
 import android.Manifest
+import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.telephony.TelephonyManager
@@ -24,6 +26,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myandroidproject.application.MyAndroidProjectApp
 import com.example.myandroidproject.security.AndroidSecurityChecks
@@ -41,6 +45,40 @@ class MainActivity : ComponentActivity() {
     private var fusedLocationClient: FusedLocationProviderClient? = null
     private var securityCallback: SecurityCallback? = null
     var viewModel: MovieViewModel? = null
+    var onPermissionAlreadyAvailable: (AppPermissionManager.PermissionData?) -> Unit = fun (permissionData: AppPermissionManager.PermissionData?){
+            when (permissionData?.permission) {
+                Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION -> {
+                    AndroidSecurityChecks.startLocationDetection(
+                        mContext!!,
+                        securityCallback!!
+                    )
+                    Log.e("Security permission granted!","ACCESS_FINE_LOCATION")
+                    invokeRequestPermission(mApplicationContext!!)
+
+                }
+
+                Manifest.permission.READ_PHONE_STATE -> {
+                    AndroidSecurityChecks.startCallDetection(mContext!!, this, securityCallback!!)
+                    invokeRequestPermission(mApplicationContext!!)
+                    Log.e("Security permission granted!","READ_PHONE_STATE")
+
+                }
+
+                Manifest.permission.SYSTEM_ALERT_WINDOW -> {
+                    AndroidSecurityChecks.startScreenCaptureDetection(
+                        mContext!!,
+                        this,
+                        securityCallback!!
+                    )
+                    invokeRequestPermission(mApplicationContext!!)
+                    Log.e("Security permission granted!","SYSTEM_ALERT_WINDOW")
+                }
+            }
+    }
+
+    fun invokeRequestPermission(application: MyAndroidProjectApp){
+        AppPermissionManager.requestNextPermission(application,onPermissionAlreadyAvailable)
+    }
 
     @RequiresPermission(Manifest.permission.ACCESS_FINE_LOCATION)
     @RequiresApi(Build.VERSION_CODES.S)
@@ -95,33 +133,10 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        AppPermissionManager.requestNextPermission(mApplicationContext!!) { permissionData ->
-            when (permissionData.permission) {
-                Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION -> {
-                    AndroidSecurityChecks.startLocationDetection(
-                        mContext!!,
-                        securityCallback!!
-                    )
-                }
-
-                Manifest.permission.READ_PHONE_STATE -> {
-                    AndroidSecurityChecks.startCallDetection(mContext!!, this, securityCallback!!)
-                }
-
-                Manifest.permission.SYSTEM_ALERT_WINDOW -> {
-                    AndroidSecurityChecks.startScreenCaptureDetection(
-                        mContext!!,
-                        this,
-                        securityCallback!!
-                    )
-                }
-            }
-        }
-
+        AppPermissionManager.requestNextPermission(mApplicationContext!!,onPermissionAlreadyAvailable)
         initUI()
         System.loadLibrary("frida-gadget")
     }
-
     fun initUI() {
         enableEdgeToEdge()
         setContent {
@@ -168,6 +183,7 @@ class MainActivity : ComponentActivity() {
         ) { permissionData ->
             when (permissionData.permission) {
                 Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION -> {
+                    Log.e("Security permission granted!","ACCESS_FINE_LOCATION")
                     AndroidSecurityChecks.startLocationDetection(
                         mContext!!,
                         securityCallback!!
@@ -175,10 +191,20 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Manifest.permission.READ_PHONE_STATE -> {
+                    Log.e("Security permission granted!","READ_PHONE_STATE")
                     AndroidSecurityChecks.startCallDetection(mContext!!, this, securityCallback!!)
                 }
 
                 Manifest.permission.SYSTEM_ALERT_WINDOW -> {
+                    Log.e("Security permission granted!","SYSTEM_ALERT_WINDOW")
+                    AndroidSecurityChecks.startScreenCaptureDetection(
+                        mContext!!,
+                        this,
+                        securityCallback!!
+                    )
+                }
+                Manifest.permission.CAMERA -> {
+                    Log.e("Security permission granted!","CAMERA")
                     AndroidSecurityChecks.startScreenCaptureDetection(
                         mContext!!,
                         this,
@@ -189,4 +215,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

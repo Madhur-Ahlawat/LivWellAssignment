@@ -13,6 +13,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Debug
+import android.os.Handler
+import android.os.Looper
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.view.WindowManager
@@ -125,16 +127,23 @@ object AndroidSecurityChecks {
     }
 
     private fun startCallDetection(
-        context: Context, activity: Activity?,
+        context: Context,
+        activity: Activity?,
         onCallStateChange: (state: Int, number: String?) -> Unit
     ) {
-        phoneStateListener = object : PhoneStateListener() {
-            override fun onCallStateChanged(state: Int, phoneNumber: String?) {
-                onCallStateChange(state, phoneNumber)
+        // Ensure listener is created on main thread
+        val mainHandler = Handler(Looper.getMainLooper())
+
+        mainHandler.post {
+            phoneStateListener = object : PhoneStateListener() {
+                override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+                    onCallStateChange(state, phoneNumber)
+                }
             }
+
+            val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            telephony.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
         }
-        val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        telephony.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE)
     }
 
     private fun stopCallDetection(context: Context) {

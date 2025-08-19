@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.myandroidproject.application.MyAndroidProjectApp
@@ -18,10 +19,10 @@ object AppPermissionManager {
 
     var permissionsRequestList = arrayOf(
         PermissionData(Manifest.permission.ACCESS_FINE_LOCATION, ACCESS_FINE_LOCATION_PERMISSION_REQUEST_CODE),
-        PermissionData(Manifest.permission.CAMERA, CAMERA_PERMISSION_REQUEST_CODE),
         PermissionData(Manifest.permission.READ_PHONE_STATE, PHONE_STATE_PERMISSION_REQUEST),
-        PermissionData(Manifest.permission.ACCESS_COARSE_LOCATION, ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE)
-    )
+        PermissionData(Manifest.permission.ACCESS_COARSE_LOCATION, ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE),
+        PermissionData(Manifest.permission.CAMERA, CAMERA_PERMISSION_REQUEST_CODE)
+        )
 
     fun init(application: MyAndroidProjectApp) {
         application.registerActivityLifecycleCallbacks(object :
@@ -85,7 +86,12 @@ object AppPermissionManager {
             val activity = application.getActivity() ?: return
             val permission = permissionsFromCallback[0]
             if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)) {
+                //show dialog to user that he has denied the permission and need to enable it from settings screen
                 redirectToSettings(activity)
+            }
+            else{
+                Log.e("Security","Permission - Dont ask once: show dialog to user that this permission is important and next time denial or \"Dont ask again will close the app")
+                //show dialog to user that this permission is important and next time denial or "Dont ask again will close the app"
             }
         }
     }
